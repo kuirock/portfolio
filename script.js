@@ -12,16 +12,44 @@ resizeCanvas();
 const glitchBlocks = [];
 const numBlocks = 150; // Increased density
 
-for (let i = 0; i < numBlocks; i++) {
-  const size = Math.random() * 30 + 5; // Square size
-  glitchBlocks.push({
-    baseX: Math.random() * canvas.width,
-    baseY: Math.random() * canvas.height, // Cover entire screen
-    width: size,
-    height: size, // Force squares
-    baseOpacity: Math.random() * 0.8 + 0.2
-  });
+function initGlitchBlocks() {
+    glitchBlocks.length = 0;
+    for (let i = 0; i < numBlocks; i++) {
+      const size = Math.random() * 30 + 5; // Square size
+
+      // Assign to edges (top:0, bottom:1, left:2, right:3)
+      const edge = Math.floor(Math.random() * 4);
+      let baseX = 0, baseY = 0;
+
+      // Random distance to allow a "thickness" to the edge effect
+      const edgeOffset = (Math.random() - 0.5) * 80;
+
+      if (edge === 0) { // Top
+          baseX = Math.random() * canvas.width;
+          baseY = 20 + edgeOffset;
+      } else if (edge === 1) { // Bottom
+          baseX = Math.random() * canvas.width;
+          baseY = canvas.height - 20 + edgeOffset;
+      } else if (edge === 2) { // Left
+          baseX = 20 + edgeOffset;
+          baseY = Math.random() * canvas.height;
+      } else if (edge === 3) { // Right
+          baseX = canvas.width - 20 + edgeOffset;
+          baseY = Math.random() * canvas.height;
+      }
+
+      glitchBlocks.push({
+        baseX: baseX,
+        baseY: baseY,
+        edge: edge, // track which edge for wave effect
+        width: size,
+        height: size, // Force squares
+        baseOpacity: Math.random() * 0.8 + 0.2
+      });
+    }
 }
+initGlitchBlocks();
+window.addEventListener('resize', initGlitchBlocks);
 
 function drawGlitch() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -38,26 +66,32 @@ function drawGlitch() {
   const beat = Math.max(0, Math.sin(time / 200) ** 8);
 
   glitchBlocks.forEach(block => {
+    // Determine position along the edge for the wave (0 to 1)
+    let posOnEdge = 0;
+    if (block.edge === 0 || block.edge === 1) posOnEdge = block.baseX / canvas.width;
+    else posOnEdge = block.baseY / canvas.height;
+
+    // Create traveling wave effect based on position and time
+    // sine wave moving across the edge
+    const wave = Math.max(0, Math.sin(posOnEdge * 10 + time / 300));
+
+    // Combine beat pulse and traveling wave
+    const pulseAndWave = (beat * 0.5) + (wave * 0.5);
+
     // Irregular flickering (flicker opacity randomly)
     let currentOpacity = block.baseOpacity;
     if (Math.random() > 0.7) {
       currentOpacity = Math.random();
     }
-    // Boost opacity on beat
-    ctx.globalAlpha = Math.min(1.0, currentOpacity + beat);
+    // Boost opacity on beat/wave
+    ctx.globalAlpha = Math.min(1.0, currentOpacity + pulseAndWave);
 
     // Violent jittering (offset position randomly)
     let offsetX = (Math.random() - 0.5) * 15;
     let offsetY = (Math.random() - 0.5) * 10;
 
-    // Random occasional large jump
-    if (Math.random() > 0.95) {
-        offsetX += (Math.random() - 0.5) * 50;
-        offsetY += (Math.random() - 0.5) * 30;
-    }
-
-    // Scale up blocks dramatically on beat
-    const scale = 1 + beat * 2.5;
+    // Scale up blocks dramatically on beat/wave
+    const scale = 1 + pulseAndWave * 3.5;
     const drawWidth = block.width * scale;
     const drawHeight = block.height * scale;
 
@@ -79,15 +113,38 @@ let state = {
   selectedElementId: null,
   slides: [
     [
-      { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200 }
+      { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200, zIndex: 1 }
     ]
   ]
 };
+
+// Attempt to load from localStorage
+const savedState = localStorage.getItem('cyberpunk_state');
+if (savedState) {
+    try {
+        state = JSON.parse(savedState);
+        state.selectedElementId = null; // deselect on reload
+    } catch (e) {
+        console.error("Failed to parse saved state", e);
+    }
+}
+
 let historyStack = [];
 
 function saveState() {
   historyStack.push(JSON.stringify(state));
   if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
+}
+
+function saveToLocalStorage() {
+    localStorage.setItem('cyberpunk_state', JSON.stringify(state));
+    // Optional: visual indicator
+    const btn = document.getElementById('saveBtn');
+    if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = 'SAVED!';
+        setTimeout(() => btn.textContent = orig, 1000);
+    }
 }
 
 function undo() {
@@ -112,10 +169,40 @@ const addImageBtn = document.getElementById('addImageBtn');
 const delSlideBtn = document.getElementById('delSlideBtn');
 const undoBtn = document.getElementById('undoBtn');
 const colorPicker = document.getElementById('colorPicker');
+const saveBtn = document.getElementById('saveBtn');
+
+const propertyPanel = document.getElementById('propertyPanel');
+const fontSelect = document.getElementById('fontSelect');
+const fontSizeInput = document.getElementById('fontSizeInput');
+const fontWeightSelect = document.getElementById('fontWeightSelect');
+const frontBtn = document.getElementById('frontBtn');
+const backBtn = document.getElementById('backBtn');
 
 function updateUI() {
   slideIndicator.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
   renderSlide();
+
+  // Populate Property Panel if element is selected
+  if (state.selectedElementId) {
+      const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+      if (stateEl) {
+          propertyPanel.style.display = 'flex';
+          if (stateEl.type === 'text') {
+              fontSelect.value = stateEl.fontFamily || "'Courier New', Courier, monospace";
+              fontSizeInput.value = stateEl.fontSize || 24;
+              fontWeightSelect.value = stateEl.fontWeight || "normal";
+              fontSelect.parentElement.style.display = 'flex';
+              fontSizeInput.parentElement.style.display = 'flex';
+              fontWeightSelect.parentElement.style.display = 'flex';
+          } else {
+              fontSelect.parentElement.style.display = 'none';
+              fontSizeInput.parentElement.style.display = 'none';
+              fontWeightSelect.parentElement.style.display = 'none';
+          }
+      }
+  } else {
+      propertyPanel.style.display = 'none';
+  }
 }
 
 prevBtn.addEventListener('click', () => {
@@ -151,7 +238,15 @@ delSlideBtn.addEventListener('click', () => {
 
 undoBtn.addEventListener('click', undo);
 
+saveBtn.addEventListener('click', saveToLocalStorage);
+
 document.addEventListener('keydown', (e) => {
+  // Save shortcut
+  if (e.ctrlKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveToLocalStorage();
+      return;
+  }
   // Undo shortcut
   if (e.ctrlKey && e.key === 'z') {
     undo();
@@ -243,6 +338,7 @@ function renderSlide() {
     div.dataset.id = el.id;
     div.style.left = `${el.x}px`;
     div.style.top = `${el.y}px`;
+    div.style.zIndex = el.zIndex || 1;
 
     if (el.id === state.selectedElementId) {
         div.classList.add('selected');
@@ -260,6 +356,9 @@ function renderSlide() {
       div.textContent = el.content;
       div.contentEditable = "true";
       if (el.color) div.style.color = el.color;
+      if (el.fontFamily) div.style.fontFamily = el.fontFamily;
+      if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
+      if (el.fontWeight) div.style.fontWeight = el.fontWeight;
       if (el.width) div.style.width = `${el.width}px`;
       if (el.height) div.style.height = `${el.height}px`;
       // Sync text edits to state
@@ -439,6 +538,124 @@ cropOption.addEventListener('click', () => {
     contextMenu.style.display = 'none';
 });
 
+
+// Property Panel Event Listeners
+fontSelect.addEventListener('change', (e) => {
+    if (state.selectedElementId) {
+        saveState();
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+        if (stateEl) stateEl.fontFamily = e.target.value;
+        updateUI();
+    }
+});
+
+fontSizeInput.addEventListener('change', (e) => {
+    if (state.selectedElementId) {
+        saveState();
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+        if (stateEl) stateEl.fontSize = e.target.value;
+        updateUI();
+    }
+});
+
+fontWeightSelect.addEventListener('change', (e) => {
+    if (state.selectedElementId) {
+        saveState();
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+        if (stateEl) stateEl.fontWeight = e.target.value;
+        updateUI();
+    }
+});
+
+frontBtn.addEventListener('click', () => {
+    if (state.selectedElementId) {
+        saveState();
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+        if (stateEl) {
+            let maxZ = 0;
+            state.slides[state.currentSlide].forEach(el => {
+                if (el.zIndex > maxZ) maxZ = el.zIndex;
+            });
+            stateEl.zIndex = maxZ + 1;
+        }
+        updateUI();
+    }
+});
+
+backBtn.addEventListener('click', () => {
+    if (state.selectedElementId) {
+        saveState();
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+        if (stateEl) {
+            let minZ = 9999;
+            state.slides[state.currentSlide].forEach(el => {
+                if (el.zIndex < minZ) minZ = el.zIndex;
+            });
+            stateEl.zIndex = (minZ === 9999 ? 0 : minZ) - 1;
+        }
+        updateUI();
+    }
+});
+
+
+const exportBtn = document.getElementById('exportBtn');
+exportBtn.addEventListener('click', async () => {
+    exportBtn.textContent = 'Exporting...';
+    exportBtn.disabled = true;
+
+    // Save current slide index and selection
+    const originalSlide = state.currentSlide;
+    const originalSelection = state.selectedElementId;
+    state.selectedElementId = null;
+
+    let pres = new pptxgen();
+
+    for (let i = 0; i < state.slides.length; i++) {
+        // Temporarily render slide i
+        state.currentSlide = i;
+        updateUI();
+
+        // Wait briefly for DOM to update and images to load
+        await new Promise(r => setTimeout(r, 100));
+
+        try {
+            // Render slide container to canvas
+            const canvasRender = await html2canvas(slideContainer, {
+                backgroundColor: null, // Transparent to allow pptx background if needed, or keep glassmorphism
+                scale: 1,
+                logging: false
+            });
+
+            const imgData = canvasRender.toDataURL('image/png');
+            let slide = pres.addSlide();
+
+            // Set dark background to match app
+            slide.background = { color: '050505' };
+
+            // Add image covering the slide
+            // default pptx size is ~10x5.625 inches
+            slide.addImage({ data: imgData, x: 0, y: 0, w: '100%', h: '100%' });
+        } catch (e) {
+            console.error("Error rendering slide " + i, e);
+        }
+    }
+
+    // Restore original state
+    state.currentSlide = originalSlide;
+    state.selectedElementId = originalSelection;
+    updateUI();
+
+    pres.writeFile({ fileName: 'cyberpunk_presentation.pptx' })
+        .then(() => {
+            exportBtn.textContent = 'Export PPTX';
+            exportBtn.disabled = false;
+        })
+        .catch(err => {
+            console.error("Export error", err);
+            exportBtn.textContent = 'Error';
+            exportBtn.disabled = false;
+        });
+});
 
 document.addEventListener('mouseup', (e) => {
   if (dragTarget || resizeTarget) {

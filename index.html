@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyberpunk Presentation Tool</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
 </head>
 <body>
   <!-- Canvas for Agent 1 -->
@@ -25,6 +27,35 @@
     <button id="delSlideBtn">Del Slide</button>
     <button id="undoBtn">Undo</button>
     <input type="color" id="colorPicker" title="Change Color" value="#00f2ff">
+    <button id="saveBtn">Save</button>
+    <button id="exportBtn">Export PPTX</button>
+  </div>
+
+  <!-- Property Panel for Agent 3 -->
+  <div id="propertyPanel" class="property-panel" style="display: none;">
+    <div class="panel-group">
+      <label>Font:</label>
+      <select id="fontSelect">
+        <option value="'Courier New', Courier, monospace">Courier</option>
+        <option value="Arial, sans-serif">Arial</option>
+        <option value="'Times New Roman', serif">Times</option>
+      </select>
+    </div>
+    <div class="panel-group">
+      <label>Size:</label>
+      <input type="number" id="fontSizeInput" min="10" max="200" value="24">
+    </div>
+    <div class="panel-group">
+      <label>Weight:</label>
+      <select id="fontWeightSelect">
+        <option value="normal">Normal</option>
+        <option value="bold">Bold</option>
+      </select>
+    </div>
+    <div class="panel-group">
+      <button id="frontBtn">Bring to Front</button>
+      <button id="backBtn">Send to Back</button>
+    </div>
   </div>
 
   <!-- Custom Context Menu for Image Trimming -->

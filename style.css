@@ -148,6 +148,53 @@ body {
   height: 30px;
 }
 
+/* Property Panel */
+.property-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #00f2ff;
+  padding: 15px;
+  color: #00f2ff;
+  z-index: 100;
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 5px;
+}
+
+.property-panel .panel-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.property-panel input, .property-panel select {
+  background: #000;
+  color: #00f2ff;
+  border: 1px solid #00f2ff;
+  padding: 3px;
+  font-family: inherit;
+  width: 100px;
+}
+
+.property-panel button {
+  background: #000;
+  color: #00f2ff;
+  border: 1px solid #00f2ff;
+  padding: 5px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.property-panel button:hover {
+  background: #00f2ff;
+  color: #000;
+}
+
 /* Context Menu */
 .context-menu {
   position: absolute;
