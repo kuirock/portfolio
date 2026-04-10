@@ -15,7 +15,7 @@ const numBlocks = 150; // Increased density
 function initGlitchBlocks() {
     glitchBlocks.length = 0;
     for (let i = 0; i < numBlocks; i++) {
-      const size = Math.random() * 30 + 5; // Square size
+      const size = Math.random() * 15 + 2; // Finer, smaller noise blocks
 
       // Assign to edges (top:0, bottom:1, left:2, right:3)
       const edge = Math.floor(Math.random() * 4);
@@ -75,23 +75,23 @@ function drawGlitch() {
     // sine wave moving across the edge
     const wave = Math.max(0, Math.sin(posOnEdge * 10 + time / 300));
 
-    // Combine beat pulse and traveling wave
-    const pulseAndWave = (beat * 0.5) + (wave * 0.5);
+    // Combine beat pulse and traveling wave (halved for subtlety)
+    const pulseAndWave = (beat * 0.25) + (wave * 0.25);
 
     // Irregular flickering (flicker opacity randomly)
     let currentOpacity = block.baseOpacity;
-    if (Math.random() > 0.7) {
-      currentOpacity = Math.random();
+    if (Math.random() > 0.8) {
+      currentOpacity = Math.random() * 0.5; // lower random opacity
     }
-    // Boost opacity on beat/wave
-    ctx.globalAlpha = Math.min(1.0, currentOpacity + pulseAndWave);
+    // Boost opacity on beat/wave (capped to achieve a calmer feel)
+    ctx.globalAlpha = Math.min(0.6, currentOpacity + pulseAndWave);
 
-    // Violent jittering (offset position randomly)
-    let offsetX = (Math.random() - 0.5) * 15;
-    let offsetY = (Math.random() - 0.5) * 10;
+    // Subtle jittering (offset position randomly)
+    let offsetX = (Math.random() - 0.5) * 5;
+    let offsetY = (Math.random() - 0.5) * 5;
 
-    // Scale up blocks dramatically on beat/wave
-    const scale = 1 + pulseAndWave * 3.5;
+    // Scale up blocks on beat/wave (reduced scale for calmness)
+    const scale = 1 + pulseAndWave * 1.5;
     const drawWidth = block.width * scale;
     const drawHeight = block.height * scale;
 
@@ -174,6 +174,7 @@ const saveBtn = document.getElementById('saveBtn');
 const propertyPanel = document.getElementById('propertyPanel');
 const fontSelect = document.getElementById('fontSelect');
 const fontSizeInput = document.getElementById('fontSizeInput');
+const fontSizeVal = document.getElementById('fontSizeVal');
 const fontWeightSelect = document.getElementById('fontWeightSelect');
 const frontBtn = document.getElementById('frontBtn');
 const backBtn = document.getElementById('backBtn');
@@ -190,6 +191,7 @@ function updateUI() {
           if (stateEl.type === 'text') {
               fontSelect.value = stateEl.fontFamily || "'Courier New', Courier, monospace";
               fontSizeInput.value = stateEl.fontSize || 24;
+              if (fontSizeVal) fontSizeVal.textContent = stateEl.fontSize || 24;
               fontWeightSelect.value = stateEl.fontWeight || "normal";
               fontSelect.parentElement.style.display = 'flex';
               fontSizeInput.parentElement.style.display = 'flex';
@@ -255,7 +257,7 @@ document.addEventListener('keydown', (e) => {
   // Delete selected element
   if ((e.key === 'Backspace' || e.key === 'Delete') && state.selectedElementId) {
     // Only delete if we are not actively typing in a contenteditable div
-    if (document.activeElement && document.activeElement.isContentEditable) {
+    if (document.activeElement && document.activeElement.contentEditable === "true") {
         return;
     }
     saveState();
@@ -354,7 +356,8 @@ function renderSlide() {
 
     if (el.type === 'text') {
       div.textContent = el.content;
-      div.contentEditable = "true";
+      div.contentEditable = "false"; // Set to false initially, enable on dblclick
+      div.style.cursor = "move"; // Explicit cursor
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
@@ -368,6 +371,12 @@ function renderSlide() {
         if (stateEl) {
           stateEl.content = e.target.textContent;
         }
+      });
+      // Save state when finishing edit
+      div.addEventListener('blur', () => {
+          div.contentEditable = "false";
+          div.style.cursor = "move";
+          saveState();
       });
     } else if (el.type === 'shape') {
       div.style.width = `${el.width}px`;
@@ -388,15 +397,29 @@ function renderSlide() {
   });
 }
 
-// Double click to toggle border radius of shapes
+// Double click actions
 slideContainer.addEventListener('dblclick', (e) => {
   if (e.target.classList.contains('shape')) {
+    // Toggle border radius of shapes
     const id = e.target.dataset.id;
     const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
     if (stateEl) {
       stateEl.borderRadius = stateEl.borderRadius === '50%' ? '0' : '50%';
-      renderSlide();
+      updateUI();
     }
+  } else if (e.target.classList.contains('text')) {
+      // Edit text
+      e.target.contentEditable = "true";
+      e.target.style.cursor = "text";
+      e.target.focus();
+
+      // Move cursor to end
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(e.target);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
   }
 });
 
@@ -549,13 +572,17 @@ fontSelect.addEventListener('change', (e) => {
     }
 });
 
-fontSizeInput.addEventListener('change', (e) => {
+fontSizeInput.addEventListener('input', (e) => {
+    if (fontSizeVal) fontSizeVal.textContent = e.target.value;
     if (state.selectedElementId) {
-        saveState();
         const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
         if (stateEl) stateEl.fontSize = e.target.value;
         updateUI();
     }
+});
+
+fontSizeInput.addEventListener('change', (e) => {
+    saveState();
 });
 
 fontWeightSelect.addEventListener('change', (e) => {
@@ -598,63 +625,45 @@ backBtn.addEventListener('click', () => {
 });
 
 
-const exportBtn = document.getElementById('exportBtn');
-exportBtn.addEventListener('click', async () => {
-    exportBtn.textContent = 'Exporting...';
-    exportBtn.disabled = true;
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const importJsonInput = document.getElementById('importJsonInput');
 
-    // Save current slide index and selection
-    const originalSlide = state.currentSlide;
-    const originalSelection = state.selectedElementId;
-    state.selectedElementId = null;
+exportJsonBtn.addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "cyberpunk_presentation.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+});
 
-    let pres = new pptxgen();
+importJsonBtn.addEventListener('click', () => {
+    importJsonInput.click();
+});
 
-    for (let i = 0; i < state.slides.length; i++) {
-        // Temporarily render slide i
-        state.currentSlide = i;
-        updateUI();
-
-        // Wait briefly for DOM to update and images to load
-        await new Promise(r => setTimeout(r, 100));
-
-        try {
-            // Render slide container to canvas
-            const canvasRender = await html2canvas(slideContainer, {
-                backgroundColor: null, // Transparent to allow pptx background if needed, or keep glassmorphism
-                scale: 1,
-                logging: false
-            });
-
-            const imgData = canvasRender.toDataURL('image/png');
-            let slide = pres.addSlide();
-
-            // Set dark background to match app
-            slide.background = { color: '050505' };
-
-            // Add image covering the slide
-            // default pptx size is ~10x5.625 inches
-            slide.addImage({ data: imgData, x: 0, y: 0, w: '100%', h: '100%' });
-        } catch (e) {
-            console.error("Error rendering slide " + i, e);
-        }
+importJsonInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const parsedState = JSON.parse(event.target.result);
+                if (parsedState && parsedState.slides) {
+                    saveState();
+                    state = parsedState;
+                    state.selectedElementId = null; // deselect everything
+                    updateUI();
+                }
+            } catch(e) {
+                console.error("Error parsing JSON file", e);
+                alert("Invalid JSON file.");
+            }
+        };
+        reader.readAsText(file);
     }
-
-    // Restore original state
-    state.currentSlide = originalSlide;
-    state.selectedElementId = originalSelection;
-    updateUI();
-
-    pres.writeFile({ fileName: 'cyberpunk_presentation.pptx' })
-        .then(() => {
-            exportBtn.textContent = 'Export PPTX';
-            exportBtn.disabled = false;
-        })
-        .catch(err => {
-            console.error("Export error", err);
-            exportBtn.textContent = 'Error';
-            exportBtn.disabled = false;
-        });
+    e.target.value = ''; // reset
 });
 
 document.addEventListener('mouseup', (e) => {
