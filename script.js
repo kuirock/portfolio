@@ -14,12 +14,11 @@ const numBlocks = 30;
 
 for (let i = 0; i < numBlocks; i++) {
   glitchBlocks.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() > 0.5 ? Math.random() * 50 : canvas.height - Math.random() * 50,
+    baseX: Math.random() * canvas.width,
+    baseY: Math.random() > 0.5 ? Math.random() * 50 : canvas.height - Math.random() * 50,
     width: Math.random() * 100 + 20,
     height: Math.random() * 5 + 2,
-    speed: Math.random() * 5 + 2,
-    opacity: Math.random() * 0.8 + 0.2
+    baseOpacity: Math.random() * 0.8 + 0.2
   });
 }
 
@@ -33,21 +32,24 @@ function drawGlitch() {
   ctx.fillStyle = '#00f2ff'; // Cyan
 
   glitchBlocks.forEach(block => {
-    ctx.globalAlpha = block.opacity;
-    ctx.fillRect(block.x, block.y, block.width, block.height);
+    // Irregular flickering (flicker opacity randomly)
+    let currentOpacity = block.baseOpacity;
+    if (Math.random() > 0.7) {
+      currentOpacity = Math.random();
+    }
+    ctx.globalAlpha = currentOpacity;
 
-    block.x += block.speed;
+    // Violent jittering (offset position randomly)
+    let offsetX = (Math.random() - 0.5) * 15;
+    let offsetY = (Math.random() - 0.5) * 10;
 
-    // Sometimes random glitch effect
+    // Random occasional large jump
     if (Math.random() > 0.95) {
-      block.y += (Math.random() - 0.5) * 10;
+        offsetX += (Math.random() - 0.5) * 50;
+        offsetY += (Math.random() - 0.5) * 30;
     }
 
-    // Wrap around
-    if (block.x > canvas.width) {
-      block.x = -block.width;
-      block.y = Math.random() > 0.5 ? Math.random() * 50 : canvas.height - Math.random() * 50;
-    }
+    ctx.fillRect(block.baseX + offsetX, block.baseY + offsetY, block.width, block.height);
   });
 
   ctx.globalAlpha = 1.0;
