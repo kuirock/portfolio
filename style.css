@@ -43,8 +43,12 @@ body {
   position: absolute;
   cursor: move; /* Indicate draggable */
   user-select: none;
-  resize: both;
-  overflow: hidden;
+}
+
+.slide-element.selected {
+  outline: 2px solid #fff;
+  box-shadow: 0 0 10px #fff;
+  z-index: 5;
 }
 
 .slide-element img {
@@ -54,9 +58,29 @@ body {
   pointer-events: none; /* Prevent img drag to allow element drag */
 }
 
+.slide-element img.cropped {
+  object-fit: none;
+  clip-path: circle(50%);
+}
+
 .slide-element.image {
   border: 1px solid #00f2ff;
 }
+
+/* Custom Resize Handles */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1px solid #000;
+  z-index: 10;
+}
+.resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.resize-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
 
 .slide-element.text {
   font-size: 24px;
@@ -115,4 +139,33 @@ body {
 .control-panel #slideIndicator {
   color: #00f2ff;
   font-weight: bold;
+}
+
+.control-panel input[type="color"] {
+  border: 1px solid #00f2ff;
+  background: #000;
+  cursor: pointer;
+  height: 30px;
+}
+
+/* Context Menu */
+.context-menu {
+  position: absolute;
+  background: rgba(0, 20, 20, 0.9);
+  border: 1px solid #00f2ff;
+  box-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+  z-index: 100;
+  padding: 5px 0;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.context-menu-item {
+  padding: 8px 20px;
+  color: #00f2ff;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: #00f2ff;
+  color: #000;
 }
