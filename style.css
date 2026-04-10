@@ -1,0 +1,105 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #050505; /* Dark tone close to black */
+  font-family: 'Courier New', Courier, monospace; /* Hacker-style monospace */
+  color: #00f2ff; /* Cyan base */
+}
+
+/* Agent 1 Canvas */
+#glitchCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1; /* Bottom-most layer */
+}
+
+/* Agent 2 Slide Container */
+.slide-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 450px; /* 16:9 aspect ratio */
+  background: rgba(0, 20, 20, 0.4); /* Semi-transparent */
+  backdrop-filter: blur(10px); /* Blur effect */
+  border: 1px solid #00f2ff;
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Presentation elements within the slide */
+.slide-element {
+  position: absolute;
+  cursor: move; /* Indicate draggable */
+  user-select: none;
+}
+
+.slide-element.text {
+  font-size: 24px;
+  min-width: 50px;
+  min-height: 30px;
+  padding: 5px;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px dashed transparent;
+}
+
+.slide-element.text:focus, .slide-element.text:hover {
+  border-color: rgba(0, 242, 255, 0.5);
+  background: rgba(0, 242, 255, 0.1);
+}
+
+.slide-element.shape {
+  background-color: rgba(0, 242, 255, 0.2);
+  border: 2px solid #00f2ff;
+}
+
+/* Control Panel */
+.control-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border: 1px solid #00f2ff;
+  border-radius: 5px;
+  z-index: 10;
+  align-items: center;
+}
+
+.control-panel button {
+  background: #000;
+  color: #00f2ff;
+  border: 1px solid #00f2ff;
+  padding: 5px 15px;
+  font-family: inherit;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.control-panel button:hover {
+  background: #00f2ff;
+  color: #000;
+  box-shadow: 0 0 10px #00f2ff;
+}
+
+.control-panel #slideIndicator {
+  color: #00f2ff;
+  font-weight: bold;
+}
