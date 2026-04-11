@@ -98,6 +98,11 @@ startPresBtn.addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (e) => {
+  // 1. 文字入力中ならカスタムコピペや削除を無視（ブラウザ標準の文字コピペに任せる）
+  if (document.activeElement && document.activeElement.contentEditable === "true") {
+    return;
+  }
+
   // Save shortcut
   if (e.ctrlKey && e.key.toLowerCase() === 's') {
       e.preventDefault();
@@ -109,16 +114,57 @@ document.addEventListener('keydown', (e) => {
     undo();
     return;
   }
+
   // Delete selected element
   if ((e.key === 'Backspace' || e.key === 'Delete') && state.selectedElementIds.length > 0) {
-    // Only delete if we are not actively typing in a contenteditable div
-    if (document.activeElement && document.activeElement.contentEditable === "true") {
-        return;
-    }
     saveState();
     state.slides[state.currentSlide] = state.slides[state.currentSlide].filter(el => !state.selectedElementIds.includes(el.id));
     state.selectedElementIds = [];
     updateUI();
+  }
+
+  // 2. コピー処理 (Ctrl+C または Cmd+C)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+    if (state.selectedElementIds.length > 0) {
+      // 選択中の要素を抽出
+      const selectedElements = state.slides[state.currentSlide].filter(el => state.selectedElementIds.includes(el.id));
+      // 完全なディープコピーでクリップボードに保存
+      clipboard = JSON.parse(JSON.stringify(selectedElements));
+    }
+  }
+
+  // 3. ペースト処理 (Ctrl+V または Cmd+V)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+    if (clipboard.length > 0) {
+      saveState(); // UNDOできるように現在の状態を保存
+
+      const newIds = [];
+      clipboard.forEach(copiedEl => {
+        // ペースト用にもう一度ディープコピー
+        const newEl = JSON.parse(JSON.stringify(copiedEl));
+        // 絶対に重複しない新しいIDを生成
+        newEl.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+        // 位置を少しずらす
+        newEl.x += 20;
+        newEl.y += 20;
+
+        state.slides[state.currentSlide].push(newEl);
+        newIds.push(newEl.id);
+      });
+
+      // ペーストした要素だけを即座に選択状態にする
+      state.selectedElementIds = newIds;
+
+      // Also update clipboard so next paste offsets again
+      clipboard = JSON.parse(JSON.stringify(clipboard));
+      clipboard.forEach(el => {
+          el.x += 20;
+          el.y += 20;
+      });
+
+      updateUI();
+      saveToLocalStorage(); // オートセーブ
+    }
   }
 });
 
@@ -304,11 +350,12 @@ document.addEventListener('DOMContentLoaded', updateUI);
 let dragTarget = null;
 let resizeTarget = null;
 let resizeCorner = null;
-let offsetX = 0;
-let offsetY = 0;
 let startRect = null;
 let startMouse = null;
 let groupDragInitialPositions = [];
+
+// グローバルスコープにクリップボードを用意
+let clipboard = [];
 
 slideContainer.addEventListener('mousedown', (e) => {
   // Handle click on slide container background to deselect
@@ -350,13 +397,13 @@ slideContainer.addEventListener('mousedown', (e) => {
     // Start drag
     saveState(); // Save state before dragging
     dragTarget = slideEl;
+    startMouse = { x: e.clientX, y: e.clientY };
 
     // Group drag setup
     groupDragInitialPositions = [];
     state.selectedElementIds.forEach(selectedId => {
         const domEl = document.querySelector(`.slide-element[data-id="${selectedId}"]`);
         if (domEl) {
-            const rect = domEl.getBoundingClientRect();
             groupDragInitialPositions.push({
                 id: selectedId,
                 dom: domEl,
@@ -365,12 +412,6 @@ slideContainer.addEventListener('mousedown', (e) => {
             });
         }
     });
-
-    const rect = dragTarget.getBoundingClientRect();
-
-    // Calculate relative offset within the element
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
   }
 });
 
@@ -396,22 +437,14 @@ document.addEventListener('mousemove', (e) => {
         const img = dragTarget.querySelector('img');
         if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
     } else {
-        const containerRect = slideContainer.getBoundingClientRect();
-        let mainNewX = e.clientX - containerRect.left - offsetX;
-        let mainNewY = e.clientY - containerRect.top - offsetY;
+        const dx = e.clientX - startMouse.x;
+        const dy = e.clientY - startMouse.y;
 
-        const primaryInitial = groupDragInitialPositions.find(p => p.id === dragTarget.dataset.id);
-        if (primaryInitial) {
-            const dx = mainNewX - primaryInitial.initialX;
-            const dy = mainNewY - primaryInitial.initialY;
-
+        if (groupDragInitialPositions.length > 0) {
             groupDragInitialPositions.forEach(pos => {
                 pos.dom.style.left = `${pos.initialX + dx}px`;
                 pos.dom.style.top = `${pos.initialY + dy}px`;
             });
-        } else {
-            dragTarget.style.left = `${mainNewX}px`;
-            dragTarget.style.top = `${mainNewY}px`;
         }
     }
   } else if (resizeTarget) {
@@ -657,6 +690,84 @@ alignBottomBtn.addEventListener('click', () => alignSelectedElement('bottom'));
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const importJsonBtn = document.getElementById('importJsonBtn');
 const importJsonInput = document.getElementById('importJsonInput');
+const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+
+exportHtmlBtn.addEventListener('click', async () => {
+    exportHtmlBtn.textContent = 'Exporting...';
+    exportHtmlBtn.disabled = true;
+
+    try {
+        const cssFetch = await fetch('css/style.css');
+        const cssContent = await cssFetch.text();
+
+        const stateJsFetch = await fetch('js/state.js');
+        const stateJsContent = await stateJsFetch.text();
+
+        const bgJsFetch = await fetch('js/background.js');
+        const bgJsContent = await bgJsFetch.text();
+
+        const viewerJsFetch = await fetch('js/viewer.js');
+        const viewerJsContent = await viewerJsFetch.text();
+
+        const stateJson = JSON.stringify(state);
+
+        const htmlTemplate = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk Presentation</title>
+  <style>
+${cssContent}
+  /* Override for viewer mode: no borders, hide overflow */
+  body {
+      cursor: none;
+  }
+  .slide-container {
+    border: none;
+    box-shadow: none;
+  }
+  .slide-element {
+      cursor: default;
+  }
+  </style>
+</head>
+<body>
+  <canvas id="glitchCanvas"></canvas>
+  <div id="slideContainer" class="slide-container"></div>
+
+  <script>
+    window.__INJECTED_STATE__ = ${stateJson};
+  </script>
+  <script>
+${stateJsContent}
+  </script>
+  <script>
+${bgJsContent}
+  </script>
+  <script>
+${viewerJsContent}
+  </script>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlTemplate], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'presentation_export.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        console.error("Failed to export HTML", e);
+        alert("Failed to export HTML.");
+    } finally {
+        exportHtmlBtn.textContent = 'Export Single HTML';
+        exportHtmlBtn.disabled = false;
+    }
+});
 
 exportJsonBtn.addEventListener('click', () => {
     exportStateToJson();

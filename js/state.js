@@ -17,8 +17,8 @@ for (let i = localStorage.length - 1; i >= 0; i--) {
     }
 }
 
-// Attempt to load from localStorage
-const savedState = localStorage.getItem('cyberpunk_state');
+// Attempt to load from injected state (exported HTML) or localStorage
+const savedState = window.__INJECTED_STATE__ ? JSON.stringify(window.__INJECTED_STATE__) : localStorage.getItem('cyberpunk_state');
 if (savedState) {
     try {
         const parsedState = JSON.parse(savedState);
@@ -41,9 +41,12 @@ function saveToLocalStorage() {
 }
 
 function saveState() {
-  // Use deep copy to prevent reference mutation bugs in history stack
-  historyStack.push(JSON.stringify(state));
-  if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
+  const stateStr = JSON.stringify(state);
+  // Only push to history if it actually changed from the last recorded state
+  if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== stateStr) {
+      historyStack.push(stateStr);
+      if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
+  }
   saveToLocalStorage(); // Auto-save on every state change
 }
 
@@ -77,7 +80,6 @@ function importStateFromJson(file) {
             try {
                 const parsedState = JSON.parse(event.target.result);
                 if (parsedState && parsedState.slides) {
-                    saveState();
                     state = parsedState;
                     // Safely migrate old state structure
                     if (state.selectedElementId !== undefined) {
@@ -85,6 +87,7 @@ function importStateFromJson(file) {
                         delete state.selectedElementId;
                     }
                     state.selectedElementIds = [];
+                    historyStack = []; // Reset history to avoid cache interference
                     saveToLocalStorage();
                     if (typeof updateUI === 'function') {
                         updateUI();
