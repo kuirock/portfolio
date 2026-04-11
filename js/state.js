@@ -9,6 +9,14 @@ let state = {
   ]
 };
 
+// Strict LocalStorage Cleanup: only keep 'cyberpunk_state'
+for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key.startsWith('cyberpunk_') && key !== 'cyberpunk_state') {
+        localStorage.removeItem(key);
+    }
+}
+
 // Attempt to load from localStorage
 const savedState = localStorage.getItem('cyberpunk_state');
 if (savedState) {

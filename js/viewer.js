@@ -16,7 +16,10 @@ function renderSlide() {
     div.style.zIndex = el.zIndex || 1;
 
     if (el.type === 'text') {
-      div.textContent = el.content;
+      const textInner = document.createElement('div');
+      textInner.className = 'text-content';
+      textInner.textContent = el.content;
+
       div.classList.add('glitch-text'); // Add glitch effect
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
@@ -24,6 +27,8 @@ function renderSlide() {
       if (el.fontWeight) div.style.fontWeight = el.fontWeight;
       if (el.width) div.style.width = `${el.width}px`;
       if (el.height) div.style.height = `${el.height}px`;
+
+      div.appendChild(textInner);
     } else if (el.type === 'shape') {
       div.style.width = `${el.width}px`;
       div.style.height = `${el.height}px`;

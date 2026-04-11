@@ -188,22 +188,14 @@ function renderSlide() {
     div.style.top = `${el.y}px`;
     div.style.zIndex = el.zIndex || 1;
 
-    if (el.id === state.selectedElementId) {
-        div.classList.add('selected');
-
-        // Add resize handles
-        ['nw', 'ne', 'sw', 'se'].forEach(corner => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle ${corner}`;
-            handle.dataset.corner = corner;
-            div.appendChild(handle);
-        });
-    }
-
     if (el.type === 'text') {
-      div.textContent = el.content;
-      div.contentEditable = "false"; // Set to false initially, enable on dblclick
-      div.style.cursor = "move"; // Explicit cursor
+      const textInner = document.createElement('div');
+      textInner.className = 'text-content';
+      textInner.textContent = el.content;
+      textInner.contentEditable = "false"; // Set to false initially, enable on dblclick
+      textInner.style.cursor = "move"; // Explicit cursor
+      textInner.dataset.id = el.id; // For input/blur tracking
+
       div.classList.add('glitch-text'); // Add glitch effect
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
@@ -211,8 +203,9 @@ function renderSlide() {
       if (el.fontWeight) div.style.fontWeight = el.fontWeight;
       if (el.width) div.style.width = `${el.width}px`;
       if (el.height) div.style.height = `${el.height}px`;
+
       // Sync text edits to state
-      div.addEventListener('input', (e) => {
+      textInner.addEventListener('input', (e) => {
         const id = e.target.dataset.id;
         const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
         if (stateEl) {
@@ -220,11 +213,12 @@ function renderSlide() {
         }
       });
       // Save state when finishing edit
-      div.addEventListener('blur', () => {
-          div.contentEditable = "false";
-          div.style.cursor = "move";
+      textInner.addEventListener('blur', () => {
+          textInner.contentEditable = "false";
+          textInner.style.cursor = "move";
           saveState();
       });
+      div.appendChild(textInner);
     } else if (el.type === 'shape') {
       div.style.width = `${el.width}px`;
       div.style.height = `${el.height}px`;
@@ -238,6 +232,18 @@ function renderSlide() {
       img.src = el.src;
       if (el.cropMode) img.classList.add('cropped');
       div.appendChild(img);
+    }
+
+    if (el.id === state.selectedElementId) {
+        div.classList.add('selected');
+
+        // Add resize handles after all internal DOM nodes (like textContent or img) have been created
+        ['nw', 'ne', 'sw', 'se'].forEach(corner => {
+            const handle = document.createElement('div');
+            handle.className = `resize-handle ${corner}`;
+            handle.dataset.corner = corner;
+            div.appendChild(handle);
+        });
     }
 
     slideContainer.appendChild(div);
@@ -254,8 +260,8 @@ slideContainer.addEventListener('dblclick', (e) => {
       stateEl.borderRadius = stateEl.borderRadius === '50%' ? '0' : '50%';
       updateUI();
     }
-  } else if (e.target.classList.contains('text')) {
-      // Edit text
+  } else if (e.target.classList.contains('text-content')) {
+      // Edit text inner wrapper
       e.target.contentEditable = "true";
       e.target.style.cursor = "text";
       e.target.focus();
@@ -347,7 +353,10 @@ document.addEventListener('mousemove', (e) => {
     }
 
     // Enforce minimum size
-    if (newWidth > 20 && newHeight > 20) {
+    const minWidth = resizeTarget.classList.contains('text') ? 50 : 20;
+    const minHeight = resizeTarget.classList.contains('text') ? 30 : 20;
+
+    if (newWidth > minWidth && newHeight > minHeight) {
         resizeTarget.style.width = `${newWidth}px`;
         resizeTarget.style.height = `${newHeight}px`;
 
@@ -500,8 +509,11 @@ document.addEventListener('mouseup', (e) => {
     if (stateEl) {
       stateEl.x = parseFloat(target.style.left);
       stateEl.y = parseFloat(target.style.top);
-      stateEl.width = parseFloat(target.style.width) || parseFloat(getComputedStyle(target).width);
-      stateEl.height = parseFloat(target.style.height) || parseFloat(getComputedStyle(target).height);
+
+      // Update dimensions explicitly for all element types
+      const computedStyle = getComputedStyle(target);
+      stateEl.width = parseFloat(computedStyle.width);
+      stateEl.height = parseFloat(computedStyle.height);
     }
     dragTarget = null;
     resizeTarget = null;

@@ -61,9 +61,6 @@ function drawGlitch() {
   ctx.fillStyle = '#00f2ff'; // Cyan
 
   const time = Date.now();
-  // Create a pulsing beat based on a sine wave.
-  // Beat roughly every 0.6 seconds (BPM ~100).
-  const beat = Math.max(0, Math.sin(time / 200) ** 8);
 
   glitchBlocks.forEach(block => {
     // Determine position along the edge for the wave (0 to 1)
@@ -71,27 +68,35 @@ function drawGlitch() {
     if (block.edge === 0 || block.edge === 1) posOnEdge = block.baseX / canvas.width;
     else posOnEdge = block.baseY / canvas.height;
 
-    // Create traveling wave effect based on position and time
-    // sine wave moving across the edge
-    const wave = Math.max(0, Math.sin(posOnEdge * 10 + time / 300));
+    // Create a chaotic pulse by combining multiple sine waves with different frequencies
+    const wave1 = Math.sin(posOnEdge * 10 + time / 300);
+    const wave2 = Math.sin(posOnEdge * 5 - time / 470);
+    const wave3 = Math.sin(posOnEdge * 20 + time / 710);
 
-    // Combine beat pulse and traveling wave (halved for subtlety)
-    const pulseAndWave = (beat * 0.25) + (wave * 0.25);
+    // Normalize combined waves (values will flutter unpredictably)
+    const chaoticPulse = Math.max(0, (wave1 + wave2 + wave3) / 3);
+
+    // Occasional unpredictable spikes
+    let spikeMultiplier = 1;
+    if (Math.random() > 0.98) {
+        spikeMultiplier = Math.random() * 3 + 2; // Spike up to 5x
+    }
 
     // Irregular flickering (flicker opacity randomly)
     let currentOpacity = block.baseOpacity;
     if (Math.random() > 0.8) {
-      currentOpacity = Math.random() * 0.5; // lower random opacity
+      currentOpacity = Math.random() * 0.8;
     }
-    // Boost opacity on beat/wave (capped to achieve a calmer feel)
-    ctx.globalAlpha = Math.min(0.6, currentOpacity + pulseAndWave);
 
-    // Subtle jittering (offset position randomly)
-    let offsetX = (Math.random() - 0.5) * 5;
-    let offsetY = (Math.random() - 0.5) * 5;
+    // Boost opacity based on chaotic pulse and spikes
+    ctx.globalAlpha = Math.min(1.0, (currentOpacity + chaoticPulse * 0.5) * spikeMultiplier);
 
-    // Scale up blocks on beat/wave (reduced scale for calmness)
-    const scale = 1 + pulseAndWave * 1.5;
+    // Jittering (offset position randomly)
+    let offsetX = (Math.random() - 0.5) * 10 * spikeMultiplier;
+    let offsetY = (Math.random() - 0.5) * 10 * spikeMultiplier;
+
+    // Scale up blocks unpredictably
+    const scale = 1 + chaoticPulse * 2 * spikeMultiplier;
     const drawWidth = block.width * scale;
     const drawHeight = block.height * scale;
 
