@@ -152,6 +152,26 @@ body {
 .slide-element.shape {
   background-color: rgba(0, 242, 255, 0.2);
   border: 2px solid #00f2ff;
+  position: absolute;
+  overflow: hidden;
+}
+
+.slide-element.shape::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Control Panel */

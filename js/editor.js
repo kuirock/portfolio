@@ -370,6 +370,11 @@ let groupDragInitialPositions = [];
 let clipboard = [];
 
 slideContainer.addEventListener('mousedown', (e) => {
+  // Fix text selection drag conflict: prevent drag initialization if clicking inside an actively editable text element
+  if (e.target.isContentEditable || e.target.closest('[contenteditable="true"]')) {
+      return;
+  }
+
   // Handle click on slide container background to deselect
   if (e.target === slideContainer) {
     state.selectedElementIds = [];
@@ -777,7 +782,7 @@ exportHtmlBtn.addEventListener('click', () => {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; color: #00f2ff; }
 #glitchCanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; }
-.slide-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; height: 90vh; background: rgba(0, 20, 20, 0.4); backdrop-filter: blur(10px); overflow: hidden; z-index: 1; }
+.slide-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; height: 90vh; background: rgba(0, 20, 20, 0.4); backdrop-filter: blur(10px); border: 1px solid #00f2ff; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); overflow: hidden; z-index: 1; }
 .slide-element { position: absolute; user-select: none; }
 .slide-element img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .slide-element.image { border: 1px solid #00f2ff; }
@@ -794,7 +799,8 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Cou
 }
 .gaming-text-fx { background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); background-size: 400%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gamingColor 3s linear infinite; }
 @keyframes gamingColor { 0% { background-position: 0%; } 100% { background-position: 400%; } }
-.slide-element.shape { background-color: rgba(0, 242, 255, 0.2); border: 2px solid #00f2ff; }
+.slide-element.shape { background-color: rgba(0, 242, 255, 0.2); border: 2px solid #00f2ff; position: absolute; overflow: hidden; }
+.slide-element.shape::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px); pointer-events: none; z-index: 1; }
 `;
 
         const stateJsContent = `
