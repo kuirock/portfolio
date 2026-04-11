@@ -21,6 +21,8 @@ function renderSlide() {
       textInner.textContent = el.content;
 
       div.classList.add('glitch-text'); // Add glitch effect
+      if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
+
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;

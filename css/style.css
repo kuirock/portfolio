@@ -104,6 +104,19 @@ body {
   animation: textGlitch 1.5s infinite linear;
 }
 
+.gaming-text-fx {
+  background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+  background-size: 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gamingColor 3s linear infinite;
+}
+
+@keyframes gamingColor {
+  0% { background-position: 0%; }
+  100% { background-position: 400%; }
+}
+
 @keyframes textGlitch {
   0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% {
     text-shadow: none;
@@ -234,13 +247,14 @@ body {
 }
 
 .align-group button {
-  flex: 0 0 30px;
+  flex: 0 0 25px;
   padding: 5px 0;
   text-align: center;
+  font-size: 10px;
 }
 
 .align-group label {
-  flex: 1;
+  flex: 0 0 50px;
   font-size: 12px;
 }
 
