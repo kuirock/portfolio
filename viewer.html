@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk Viewer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Override for viewer mode: no borders, hide overflow */
+    body {
+        cursor: none; /* Hide cursor in presentation mode if desired, or keep it */
+    }
+    .slide-container {
+      border: none;
+      box-shadow: none;
+    }
+    .slide-element {
+        cursor: default; /* No move cursor */
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas for Agent 1 -->
+  <canvas id="glitchCanvas"></canvas>
+
+  <!-- Slide container for Agent 2 -->
+  <div id="slideContainer" class="slide-container"></div>
+
+  <script src="js/state.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/viewer.js"></script>
+</body>
+</html>

@@ -1,163 +1,3 @@
-// --- Agent 1: Canvas Animation ---
-const canvas = document.getElementById('glitchCanvas');
-const ctx = canvas.getContext('2d');
-
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-
-const glitchBlocks = [];
-const numBlocks = 150; // Increased density
-
-function initGlitchBlocks() {
-    glitchBlocks.length = 0;
-    for (let i = 0; i < numBlocks; i++) {
-      const size = Math.random() * 15 + 2; // Finer, smaller noise blocks
-
-      // Assign to edges (top:0, bottom:1, left:2, right:3)
-      const edge = Math.floor(Math.random() * 4);
-      let baseX = 0, baseY = 0;
-
-      // Random distance to allow a "thickness" to the edge effect
-      const edgeOffset = (Math.random() - 0.5) * 80;
-
-      if (edge === 0) { // Top
-          baseX = Math.random() * canvas.width;
-          baseY = 20 + edgeOffset;
-      } else if (edge === 1) { // Bottom
-          baseX = Math.random() * canvas.width;
-          baseY = canvas.height - 20 + edgeOffset;
-      } else if (edge === 2) { // Left
-          baseX = 20 + edgeOffset;
-          baseY = Math.random() * canvas.height;
-      } else if (edge === 3) { // Right
-          baseX = canvas.width - 20 + edgeOffset;
-          baseY = Math.random() * canvas.height;
-      }
-
-      glitchBlocks.push({
-        baseX: baseX,
-        baseY: baseY,
-        edge: edge, // track which edge for wave effect
-        width: size,
-        height: size, // Force squares
-        baseOpacity: Math.random() * 0.8 + 0.2
-      });
-    }
-}
-initGlitchBlocks();
-window.addEventListener('resize', initGlitchBlocks);
-
-function drawGlitch() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Fill background
-  ctx.fillStyle = '#050505';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = '#00f2ff'; // Cyan
-
-  const time = Date.now();
-  // Create a pulsing beat based on a sine wave.
-  // Beat roughly every 0.6 seconds (BPM ~100).
-  const beat = Math.max(0, Math.sin(time / 200) ** 8);
-
-  glitchBlocks.forEach(block => {
-    // Determine position along the edge for the wave (0 to 1)
-    let posOnEdge = 0;
-    if (block.edge === 0 || block.edge === 1) posOnEdge = block.baseX / canvas.width;
-    else posOnEdge = block.baseY / canvas.height;
-
-    // Create traveling wave effect based on position and time
-    // sine wave moving across the edge
-    const wave = Math.max(0, Math.sin(posOnEdge * 10 + time / 300));
-
-    // Combine beat pulse and traveling wave (halved for subtlety)
-    const pulseAndWave = (beat * 0.25) + (wave * 0.25);
-
-    // Irregular flickering (flicker opacity randomly)
-    let currentOpacity = block.baseOpacity;
-    if (Math.random() > 0.8) {
-      currentOpacity = Math.random() * 0.5; // lower random opacity
-    }
-    // Boost opacity on beat/wave (capped to achieve a calmer feel)
-    ctx.globalAlpha = Math.min(0.6, currentOpacity + pulseAndWave);
-
-    // Subtle jittering (offset position randomly)
-    let offsetX = (Math.random() - 0.5) * 5;
-    let offsetY = (Math.random() - 0.5) * 5;
-
-    // Scale up blocks on beat/wave (reduced scale for calmness)
-    const scale = 1 + pulseAndWave * 1.5;
-    const drawWidth = block.width * scale;
-    const drawHeight = block.height * scale;
-
-    ctx.fillRect(block.baseX + offsetX - (drawWidth - block.width)/2,
-                 block.baseY + offsetY - (drawHeight - block.height)/2,
-                 drawWidth, drawHeight);
-  });
-
-  ctx.globalAlpha = 1.0;
-  requestAnimationFrame(drawGlitch);
-}
-
-// Start loop
-drawGlitch();
-
-// --- Agent 2: State Management & UI logic ---
-let state = {
-  currentSlide: 0,
-  selectedElementId: null,
-  slides: [
-    [
-      { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200, zIndex: 1 }
-    ]
-  ]
-};
-
-// Attempt to load from localStorage
-const savedState = localStorage.getItem('cyberpunk_state');
-if (savedState) {
-    try {
-        state = JSON.parse(savedState);
-        state.selectedElementId = null; // deselect on reload
-    } catch (e) {
-        console.error("Failed to parse saved state", e);
-    }
-}
-
-let historyStack = [];
-
-function saveState() {
-  historyStack.push(JSON.stringify(state));
-  if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
-}
-
-function saveToLocalStorage() {
-    localStorage.setItem('cyberpunk_state', JSON.stringify(state));
-    // Optional: visual indicator
-    const btn = document.getElementById('saveBtn');
-    if (btn) {
-        const orig = btn.textContent;
-        btn.textContent = 'SAVED!';
-        setTimeout(() => btn.textContent = orig, 1000);
-    }
-}
-
-function undo() {
-  if (historyStack.length > 0) {
-    const prevState = historyStack.pop();
-    state = JSON.parse(prevState);
-    updateUI();
-  }
-}
-
-// Initial save
-saveState();
-
 const slideContainer = document.getElementById('slideContainer');
 const slideIndicator = document.getElementById('slideIndicator');
 const prevBtn = document.getElementById('prevBtn');
@@ -178,6 +18,7 @@ const fontSizeVal = document.getElementById('fontSizeVal');
 const fontWeightSelect = document.getElementById('fontWeightSelect');
 const frontBtn = document.getElementById('frontBtn');
 const backBtn = document.getElementById('backBtn');
+const startPresBtn = document.getElementById('startPresBtn');
 
 function updateUI() {
   slideIndicator.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
@@ -241,6 +82,11 @@ delSlideBtn.addEventListener('click', () => {
 undoBtn.addEventListener('click', undo);
 
 saveBtn.addEventListener('click', saveToLocalStorage);
+
+startPresBtn.addEventListener('click', () => {
+    saveToLocalStorage();
+    window.open('viewer.html', '_blank');
+});
 
 document.addEventListener('keydown', (e) => {
   // Save shortcut
