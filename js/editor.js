@@ -254,7 +254,7 @@ function renderSlide() {
     if (el.type === 'text') {
       const textInner = document.createElement('div');
       textInner.className = 'text-content';
-      textInner.textContent = el.content;
+      textInner.innerHTML = el.content;
       textInner.contentEditable = "false"; // Set to false initially, enable on dblclick
       textInner.style.cursor = "move"; // Explicit cursor
       textInner.dataset.id = el.id; // For input/blur tracking
@@ -276,7 +276,7 @@ function renderSlide() {
         const id = e.target.dataset.id;
         const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
         if (stateEl) {
-          stateEl.content = e.target.textContent;
+          stateEl.content = e.target.innerHTML;
         }
       });
       // Save state when finishing edit
@@ -368,6 +368,36 @@ let groupDragInitialPositions = [];
 
 // グローバルスコープにクリップボードを用意
 let clipboard = [];
+
+// Property Panel Dragging
+const propertyPanel = document.getElementById('propertyPanel');
+const propertyPanelHeader = document.getElementById('propertyPanelHeader');
+let isDraggingPanel = false;
+let panelOffsetX = 0;
+let panelOffsetY = 0;
+
+propertyPanelHeader.addEventListener('mousedown', (e) => {
+    isDraggingPanel = true;
+    const rect = propertyPanel.getBoundingClientRect();
+    panelOffsetX = e.clientX - rect.left;
+    panelOffsetY = e.clientY - rect.top;
+
+    // Switch from right/top to left/top to avoid sizing issues during drag
+    propertyPanel.style.right = 'auto';
+    propertyPanel.style.left = `${rect.left}px`;
+    propertyPanel.style.top = `${rect.top}px`;
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isDraggingPanel) {
+        propertyPanel.style.left = `${e.clientX - panelOffsetX}px`;
+        propertyPanel.style.top = `${e.clientY - panelOffsetY}px`;
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDraggingPanel = false;
+});
 
 slideContainer.addEventListener('mousedown', (e) => {
   // Fix text selection drag conflict: prevent drag initialization if clicking inside an actively editable text element
@@ -500,8 +530,10 @@ document.addEventListener('mousemove', (e) => {
 });
 
 colorPicker.addEventListener('change', (e) => {
+  saveState();
+  if (applyRichTextCommand('foreColor', e.target.value)) return;
+
   if (state.selectedElementIds.length > 0) {
-    saveState();
     state.slides[state.currentSlide].forEach(el => {
       if (state.selectedElementIds.includes(el.id)) {
         if (el.type === 'text') el.color = e.target.value;
@@ -552,9 +584,37 @@ cropOption.addEventListener('click', () => {
 
 
 // Property Panel Event Listeners
+function applyRichTextCommand(command, value = null) {
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0 && !sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        let commonAncestor = range.commonAncestorContainer;
+        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode; // Get element if text node
+
+        // Ensure we are inside a contenteditable text element
+        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+            document.execCommand(command, false, value);
+
+            // Sync the updated innerHTML back to state
+            const textContentEl = commonAncestor.closest('.text-content');
+            if (textContentEl) {
+                const id = textContentEl.dataset.id;
+                const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+                if (stateEl) {
+                    stateEl.content = textContentEl.innerHTML;
+                }
+            }
+            return true; // Command was applied
+        }
+    }
+    return false; // Command was not applied to rich text
+}
+
 fontSelect.addEventListener('change', (e) => {
+    saveState();
+    if (applyRichTextCommand('fontName', e.target.value)) return;
+
     if (state.selectedElementIds.length > 0) {
-        saveState();
         state.slides[state.currentSlide].forEach(el => {
             if (state.selectedElementIds.includes(el.id)) el.fontFamily = e.target.value;
         });
@@ -564,6 +624,33 @@ fontSelect.addEventListener('change', (e) => {
 
 fontSizeInput.addEventListener('input', (e) => {
     if (fontSizeVal) fontSizeVal.textContent = e.target.value;
+
+    // Instead of execCommand 'fontSize' which only supports 1-7, we apply a span with styling if editing text
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0 && !sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        let commonAncestor = range.commonAncestorContainer;
+        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
+
+        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+             document.execCommand('fontSize', false, "7"); // Apply arbitrary large size
+             const textContentEl = commonAncestor.closest('.text-content');
+             // Replace the injected font size 7 with our pixel size
+             const elements = textContentEl.querySelectorAll('font[size="7"]');
+             elements.forEach(fontEl => {
+                 fontEl.removeAttribute('size');
+                 fontEl.style.fontSize = `${e.target.value}px`;
+             });
+
+             const id = textContentEl.dataset.id;
+             const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+             if (stateEl) {
+                 stateEl.content = textContentEl.innerHTML;
+             }
+             return; // Skip global update
+        }
+    }
+
     if (state.selectedElementIds.length > 0) {
         state.slides[state.currentSlide].forEach(el => {
             if (state.selectedElementIds.includes(el.id)) el.fontSize = e.target.value;
@@ -577,8 +664,30 @@ fontSizeInput.addEventListener('change', (e) => {
 });
 
 fontWeightSelect.addEventListener('change', (e) => {
+    saveState();
+    // For rich text, if bold is selected, we run 'bold' command
+    const isBold = e.target.value === 'bold';
+
+    const sel = window.getSelection();
+    if (sel.rangeCount > 0 && !sel.isCollapsed) {
+        let commonAncestor = sel.getRangeAt(0).commonAncestorContainer;
+        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
+        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+            // Document.execCommand('bold') toggles it, but we have an explicit normal/bold dropdown
+            // To force it, we wrap it manually or rely on toggle. Here we rely on toggle if it doesn't match state
+            document.execCommand('bold', false, null);
+
+            const textContentEl = commonAncestor.closest('.text-content');
+            if (textContentEl) {
+                const id = textContentEl.dataset.id;
+                const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+                if (stateEl) stateEl.content = textContentEl.innerHTML;
+            }
+            return;
+        }
+    }
+
     if (state.selectedElementIds.length > 0) {
-        saveState();
         state.slides[state.currentSlide].forEach(el => {
             if (state.selectedElementIds.includes(el.id)) el.fontWeight = e.target.value;
         });
@@ -799,7 +908,8 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Cou
 }
 .gaming-text-fx { background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); background-size: 400%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gamingColor 3s linear infinite; }
 @keyframes gamingColor { 0% { background-position: 0%; } 100% { background-position: 400%; } }
-.slide-element.shape { background-color: rgba(0, 242, 255, 0.2); border: 2px solid #00f2ff; position: absolute; overflow: hidden; }
+.slide-element.shape { background-color: rgba(0, 242, 255, 0.2); border: 2px solid #00f2ff; position: absolute; overflow: hidden; animation: shapeGlitch 4s infinite; }
+@keyframes shapeGlitch { 0% { opacity: 1; transform: translate(0, 0); } 2% { opacity: 0.8; transform: translate(-2px, 1px); background-color: rgba(0, 242, 255, 0.4); } 4% { opacity: 1; transform: translate(2px, -1px); } 6% { opacity: 0.9; transform: translate(0, 0); background-color: rgba(0, 242, 255, 0.2); } 45% { opacity: 1; transform: translate(0, 0); } 46% { opacity: 0.7; transform: translate(1px, 2px); } 48% { opacity: 1; transform: translate(-1px, -2px); } 50% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 1; transform: translate(0, 0); } }
 .slide-element.shape::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px); pointer-events: none; z-index: 1; }
 `;
 
@@ -882,7 +992,7 @@ function renderSlide() {
     div.classList.add('slide-element', el.type);
     div.style.left = \`\${el.x}px\`; div.style.top = \`\${el.y}px\`; div.style.zIndex = el.zIndex || 1;
     if (el.type === 'text') {
-      const textInner = document.createElement('div'); textInner.className = 'text-content'; textInner.textContent = el.content;
+      const textInner = document.createElement('div'); textInner.className = 'text-content'; textInner.innerHTML = el.content;
       div.classList.add('glitch-text');
       if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
       if (el.color) div.style.color = el.color;

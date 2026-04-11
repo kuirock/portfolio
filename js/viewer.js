@@ -18,7 +18,7 @@ function renderSlide() {
     if (el.type === 'text') {
       const textInner = document.createElement('div');
       textInner.className = 'text-content';
-      textInner.textContent = el.content;
+      textInner.innerHTML = el.content;
 
       div.classList.add('glitch-text'); // Add glitch effect
       if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
