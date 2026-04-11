@@ -1,18 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyberpunk Presentation Tool</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;700&family=Orbitron:wght@400;700&display=swap"
-    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
   <!-- Canvas for Agent 1 -->
   <canvas id="glitchCanvas"></canvas>
@@ -29,7 +22,10 @@
     <button id="addShapeBtn">+ Shape</button>
     <input type="file" id="imageInput" accept="image/*" style="display: none;">
     <button id="addImageBtn">+ Image</button>
+    <button id="insertSlideBtn">Insert Slide</button>
     <button id="delSlideBtn">Del Slide</button>
+    <button id="moveSlideLeftBtn">&lt; Move</button>
+    <button id="moveSlideRightBtn">Move &gt;</button>
     <button id="undoBtn">Undo</button>
     <input type="color" id="colorPicker" title="Change Color" value="#00f2ff">
     <button id="exportJsonBtn">Save as File</button>
@@ -49,11 +45,6 @@
         <option value="'ＭＳ ゴシック', sans-serif">MS Gothic</option>
         <option value="Arial, sans-serif">Arial</option>
         <option value="'Times New Roman', serif">Times</option>
-
-        <option value="'Orbitron', sans-serif">Orbitron (サイバー)</option>
-        <option value="'DotGothic16', sans-serif">DotGothic (ドット絵)</option>
-        <option value="'Noto Sans JP', sans-serif">Noto Sans JP (ゴシック)</option>
-        <option value="Impact, fantasy">Impact (極太)</option>
       </select>
     </div>
     <div class="panel-group">
@@ -99,5 +90,4 @@
   <script src="js/background.js"></script>
   <script src="js/editor.js"></script>
 </body>
-
 </html>
