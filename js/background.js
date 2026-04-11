@@ -62,24 +62,33 @@ function drawGlitch() {
 
   const time = Date.now();
 
+  // Calculate a global ECG-style heartbeat spike
+  // Use modulo math to repeat every 1200ms
+  const tMod = time % 1200;
+  // A sharp mathematical spike similar to a QRS complex
+  const ecgSpike = Math.exp(-Math.pow(tMod - 600, 2) / 800) * 1.5;
+  // An occasional random missed or early beat to make it buggy
+  const jitterSpike = (Math.random() > 0.98) ? Math.random() * 2 : 0;
+
+  const globalPulse = ecgSpike + jitterSpike;
+
   glitchBlocks.forEach(block => {
     // Determine position along the edge for the wave (0 to 1)
     let posOnEdge = 0;
     if (block.edge === 0 || block.edge === 1) posOnEdge = block.baseX / canvas.width;
     else posOnEdge = block.baseY / canvas.height;
 
-    // Create a chaotic pulse by combining multiple sine waves with different frequencies
-    const wave1 = Math.sin(posOnEdge * 10 + time / 300);
-    const wave2 = Math.sin(posOnEdge * 5 - time / 470);
-    const wave3 = Math.sin(posOnEdge * 20 + time / 710);
+    // Local, high-frequency "static" waves for the edges
+    const wave1 = Math.sin(posOnEdge * 50 + time / 150);
+    const wave2 = Math.sin(posOnEdge * 20 - time / 220);
+    const localNoise = Math.max(0, (wave1 + wave2) / 2);
 
-    // Normalize combined waves (values will flutter unpredictably)
-    const chaoticPulse = Math.max(0, (wave1 + wave2 + wave3) / 3);
+    const combinedPulse = Math.max(0, localNoise * 0.5 + globalPulse);
 
-    // Occasional unpredictable spikes
+    // Occasional unpredictable spikes per block
     let spikeMultiplier = 1;
-    if (Math.random() > 0.98) {
-        spikeMultiplier = Math.random() * 3 + 2; // Spike up to 5x
+    if (Math.random() > 0.99) {
+        spikeMultiplier = Math.random() * 2 + 1.5;
     }
 
     // Irregular flickering (flicker opacity randomly)
@@ -88,15 +97,15 @@ function drawGlitch() {
       currentOpacity = Math.random() * 0.8;
     }
 
-    // Boost opacity based on chaotic pulse and spikes
-    ctx.globalAlpha = Math.min(1.0, (currentOpacity + chaoticPulse * 0.5) * spikeMultiplier);
+    // Boost opacity based on combined pulse and spikes
+    ctx.globalAlpha = Math.min(1.0, (currentOpacity + combinedPulse * 0.5) * spikeMultiplier);
 
     // Jittering (offset position randomly)
     let offsetX = (Math.random() - 0.5) * 10 * spikeMultiplier;
     let offsetY = (Math.random() - 0.5) * 10 * spikeMultiplier;
 
     // Scale up blocks unpredictably
-    const scale = 1 + chaoticPulse * 2 * spikeMultiplier;
+    const scale = 1 + combinedPulse * 1.5 * spikeMultiplier;
     const drawWidth = block.width * scale;
     const drawHeight = block.height * scale;
 

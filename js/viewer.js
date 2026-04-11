@@ -26,7 +26,7 @@ function renderSlide() {
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
       if (el.fontWeight) div.style.fontWeight = el.fontWeight;
       if (el.width) div.style.width = `${el.width}px`;
-      if (el.height) div.style.height = `${el.height}px`;
+      if (el.height) div.style.height = `auto`;
 
       div.appendChild(textInner);
     } else if (el.type === 'shape') {
@@ -38,9 +38,16 @@ function renderSlide() {
     } else if (el.type === 'image') {
       div.style.width = `${el.width}px`;
       div.style.height = `${el.height}px`;
+      div.style.overflow = "hidden"; // Clip the image within the container
       const img = document.createElement('img');
       img.src = el.src;
-      if (el.cropMode) img.classList.add('cropped');
+      img.style.objectFit = "cover";
+      img.style.width = "100%";
+      img.style.height = "100%";
+
+      const cropX = el.cropX !== undefined ? el.cropX : 50;
+      const cropY = el.cropY !== undefined ? el.cropY : 50;
+      img.style.objectPosition = `${cropX}% ${cropY}%`;
       div.appendChild(img);
     }
 

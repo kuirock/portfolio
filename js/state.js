@@ -30,20 +30,14 @@ if (savedState) {
 
 let historyStack = [];
 
+function saveToLocalStorage() {
+    localStorage.setItem('cyberpunk_state', JSON.stringify(state));
+}
+
 function saveState() {
   historyStack.push(JSON.stringify(state));
   if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
-}
-
-function saveToLocalStorage() {
-    localStorage.setItem('cyberpunk_state', JSON.stringify(state));
-    // Optional: visual indicator if saveBtn exists
-    const btn = document.getElementById('saveBtn');
-    if (btn) {
-        const orig = btn.textContent;
-        btn.textContent = 'SAVED!';
-        setTimeout(() => btn.textContent = orig, 1000);
-    }
+  saveToLocalStorage(); // Auto-save on every state change
 }
 
 function undo() {

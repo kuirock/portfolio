@@ -9,7 +9,6 @@ const addImageBtn = document.getElementById('addImageBtn');
 const delSlideBtn = document.getElementById('delSlideBtn');
 const undoBtn = document.getElementById('undoBtn');
 const colorPicker = document.getElementById('colorPicker');
-const saveBtn = document.getElementById('saveBtn');
 
 const propertyPanel = document.getElementById('propertyPanel');
 const fontSelect = document.getElementById('fontSelect');
@@ -81,10 +80,8 @@ delSlideBtn.addEventListener('click', () => {
 
 undoBtn.addEventListener('click', undo);
 
-saveBtn.addEventListener('click', saveToLocalStorage);
-
 startPresBtn.addEventListener('click', () => {
-    saveToLocalStorage();
+    saveToLocalStorage(); // Ensure latest is saved
     window.open('viewer.html', '_blank');
 });
 
@@ -202,7 +199,7 @@ function renderSlide() {
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
       if (el.fontWeight) div.style.fontWeight = el.fontWeight;
       if (el.width) div.style.width = `${el.width}px`;
-      if (el.height) div.style.height = `${el.height}px`;
+      if (el.height) div.style.height = `auto`; // Auto-adjust height based on font/wrap
 
       // Sync text edits to state
       textInner.addEventListener('input', (e) => {
@@ -228,9 +225,21 @@ function renderSlide() {
     } else if (el.type === 'image') {
       div.style.width = `${el.width}px`;
       div.style.height = `${el.height}px`;
+      div.style.overflow = "hidden"; // Clip the image within the container
       const img = document.createElement('img');
       img.src = el.src;
-      if (el.cropMode) img.classList.add('cropped');
+      img.style.objectFit = "cover";
+      img.style.width = "100%";
+      img.style.height = "100%";
+
+      const cropX = el.cropX !== undefined ? el.cropX : 50;
+      const cropY = el.cropY !== undefined ? el.cropY : 50;
+      img.style.objectPosition = `${cropX}% ${cropY}%`;
+
+      if (el.cropMode) {
+          // Visual indicator for crop mode
+          div.style.outline = "2px dashed #ff00ff";
+      }
       div.appendChild(img);
     }
 
@@ -326,12 +335,33 @@ slideContainer.addEventListener('mousedown', (e) => {
 
 document.addEventListener('mousemove', (e) => {
   if (dragTarget) {
-    const containerRect = slideContainer.getBoundingClientRect();
-    let newX = e.clientX - containerRect.left - offsetX;
-    let newY = e.clientY - containerRect.top - offsetY;
+    const stateEl = state.slides[state.currentSlide].find(item => item.id === dragTarget.dataset.id);
 
-    dragTarget.style.left = `${newX}px`;
-    dragTarget.style.top = `${newY}px`;
+    if (stateEl && stateEl.cropMode) {
+        // Adjust the object-position (cropX, cropY) instead of moving container
+        const dx = e.movementX * -0.5; // Sensitivity multiplier
+        const dy = e.movementY * -0.5;
+
+        let newCropX = (stateEl.cropX || 50) + dx;
+        let newCropY = (stateEl.cropY || 50) + dy;
+
+        // Clamp between 0 and 100%
+        newCropX = Math.max(0, Math.min(100, newCropX));
+        newCropY = Math.max(0, Math.min(100, newCropY));
+
+        stateEl.cropX = newCropX;
+        stateEl.cropY = newCropY;
+
+        const img = dragTarget.querySelector('img');
+        if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
+    } else {
+        const containerRect = slideContainer.getBoundingClientRect();
+        let newX = e.clientX - containerRect.left - offsetX;
+        let newY = e.clientY - containerRect.top - offsetY;
+
+        dragTarget.style.left = `${newX}px`;
+        dragTarget.style.top = `${newY}px`;
+    }
   } else if (resizeTarget) {
     const dx = e.clientX - startMouse.x;
     const dy = e.clientY - startMouse.y;

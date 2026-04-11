@@ -59,8 +59,7 @@ body {
 }
 
 .slide-element img.cropped {
-  object-fit: none;
-  clip-path: circle(50%);
+  /* Replaced simple circular crop with robust PPTX-like object-fit rendering applied directly in JS */
 }
 
 .slide-element.image {
@@ -94,38 +93,41 @@ body {
 
 .text-content {
   width: 100%;
-  height: 100%;
+  height: auto; /* Fix text cutoff */
   white-space: pre-wrap;
   word-wrap: break-word;
-  overflow: hidden; /* Ensure resized text boxes wrap/clip properly */
   outline: none;
 }
 
 /* Intense Text Glitch Effect */
 .glitch-text {
-  animation: textGlitch 2.5s infinite linear;
+  animation: textGlitch 1.5s infinite linear;
 }
 
 @keyframes textGlitch {
-  0%, 15%, 25%, 35%, 50%, 65%, 75%, 85%, 95%, 100% {
+  0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% {
     text-shadow: none;
     transform: translate(0, 0);
   }
-  10%, 60% {
-    text-shadow: 4px 0 0 #00f2ff, -4px 0 0 #ff00ff;
-    transform: translate(-2px, 1px);
+  5%, 55% {
+    text-shadow: 5px 0 0 #ff0000, -5px 0 0 #0000ff;
+    transform: translate(-3px, 0);
   }
-  20%, 70% {
-    text-shadow: -3px 0 0 #00f2ff, 3px 0 0 #ff00ff;
-    transform: translate(2px, -1px);
+  15%, 65% {
+    text-shadow: -4px 0 0 #ff0000, 4px 0 0 #0000ff;
+    transform: translate(3px, 0);
   }
-  30%, 80% {
-    text-shadow: 2px 0 0 #00f2ff, -2px 0 0 #ff00ff;
-    transform: translate(-1px, 0);
+  25%, 75% {
+    text-shadow: 3px 0 0 #ff0000, -3px 0 0 #0000ff;
+    transform: translate(-1px, 2px);
   }
-  40%, 90% {
-    text-shadow: -5px 0 0 #00f2ff, 5px 0 0 #ff00ff;
-    transform: translate(1px, 2px);
+  35%, 85% {
+    text-shadow: -6px 0 0 #ff0000, 6px 0 0 #0000ff;
+    transform: translate(2px, -2px);
+  }
+  45%, 95% {
+    text-shadow: 2px 0 0 #ff0000, -2px 0 0 #0000ff;
+    transform: translate(-2px, 0);
   }
 }
 
