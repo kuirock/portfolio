@@ -79,7 +79,7 @@ function drawGlitch() {
     // Gaming RGB Neon calculation
     // Shift the hue slowly over time and position
     const hue = (posOnEdge * 360 + time / 20) % 360;
-    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
     ctx.shadowBlur = 15;
     ctx.shadowColor = ctx.fillStyle;
 

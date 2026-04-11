@@ -29,9 +29,9 @@ function updateUI() {
   slideIndicator.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
   renderSlide();
 
-  // Populate Property Panel if element is selected
-  if (state.selectedElementId) {
-      const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+  // Populate Property Panel if exactly 1 element is selected
+  if (state.selectedElementIds.length === 1) {
+      const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementIds[0]);
       if (stateEl) {
           propertyPanel.style.display = 'flex';
           if (stateEl.type === 'text') {
@@ -48,6 +48,12 @@ function updateUI() {
               fontWeightSelect.parentElement.style.display = 'none';
           }
       }
+  } else if (state.selectedElementIds.length > 1) {
+      // For multiple elements, hide specific properties but allow alignment
+      propertyPanel.style.display = 'flex';
+      fontSelect.parentElement.style.display = 'none';
+      fontSizeInput.parentElement.style.display = 'none';
+      fontWeightSelect.parentElement.style.display = 'none';
   } else {
       propertyPanel.style.display = 'none';
   }
@@ -56,7 +62,7 @@ function updateUI() {
 prevBtn.addEventListener('click', () => {
   if (state.currentSlide > 0) {
     state.currentSlide--;
-    state.selectedElementId = null;
+    state.selectedElementIds = [];
     updateUI();
   }
 });
@@ -67,7 +73,7 @@ nextBtn.addEventListener('click', () => {
     state.slides.push([]); // Create new slide
   }
   state.currentSlide++;
-  state.selectedElementId = null;
+  state.selectedElementIds = [];
   updateUI();
 });
 
@@ -80,7 +86,7 @@ delSlideBtn.addEventListener('click', () => {
   if (state.currentSlide >= state.slides.length) {
     state.currentSlide = Math.max(0, state.slides.length - 1);
   }
-  state.selectedElementId = null;
+  state.selectedElementIds = [];
   updateUI();
 });
 
@@ -104,14 +110,14 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   // Delete selected element
-  if ((e.key === 'Backspace' || e.key === 'Delete') && state.selectedElementId) {
+  if ((e.key === 'Backspace' || e.key === 'Delete') && state.selectedElementIds.length > 0) {
     // Only delete if we are not actively typing in a contenteditable div
     if (document.activeElement && document.activeElement.contentEditable === "true") {
         return;
     }
     saveState();
-    state.slides[state.currentSlide] = state.slides[state.currentSlide].filter(el => el.id !== state.selectedElementId);
-    state.selectedElementId = null;
+    state.slides[state.currentSlide] = state.slides[state.currentSlide].filter(el => !state.selectedElementIds.includes(el.id));
+    state.selectedElementIds = [];
     updateUI();
   }
 });
@@ -128,7 +134,7 @@ addTextBtn.addEventListener('click', () => {
     color: colorPicker.value
   };
   state.slides[state.currentSlide].push(newElement);
-  state.selectedElementId = newElement.id;
+  state.selectedElementIds = [newElement.id];
   updateUI();
 });
 
@@ -146,7 +152,7 @@ addShapeBtn.addEventListener('click', () => {
     borderColor: colorPicker.value
   };
   state.slides[state.currentSlide].push(newElement);
-  state.selectedElementId = newElement.id;
+  state.selectedElementIds = [newElement.id];
   updateUI();
 });
 
@@ -171,7 +177,7 @@ imageInput.addEventListener('change', (e) => {
         cropMode: false
       };
       state.slides[state.currentSlide].push(newElement);
-      state.selectedElementId = newElement.id;
+      state.selectedElementIds = [newElement.id];
       updateUI();
     };
     reader.readAsDataURL(file);
@@ -249,7 +255,7 @@ function renderSlide() {
       div.appendChild(img);
     }
 
-    if (el.id === state.selectedElementId) {
+    if (state.selectedElementIds.includes(el.id)) {
         div.classList.add('selected');
 
         // Add resize handles after all internal DOM nodes (like textContent or img) have been created
@@ -302,11 +308,12 @@ let offsetX = 0;
 let offsetY = 0;
 let startRect = null;
 let startMouse = null;
+let groupDragInitialPositions = [];
 
 slideContainer.addEventListener('mousedown', (e) => {
   // Handle click on slide container background to deselect
   if (e.target === slideContainer) {
-    state.selectedElementId = null;
+    state.selectedElementIds = [];
     updateUI();
     return;
   }
@@ -323,14 +330,42 @@ slideContainer.addEventListener('mousedown', (e) => {
 
   const slideEl = e.target.closest('.slide-element');
   if (slideEl) {
-    if (state.selectedElementId !== slideEl.dataset.id) {
-        state.selectedElementId = slideEl.dataset.id;
+    const id = slideEl.dataset.id;
+    if (e.shiftKey) {
+        // Toggle selection
+        if (state.selectedElementIds.includes(id)) {
+            state.selectedElementIds = state.selectedElementIds.filter(i => i !== id);
+        } else {
+            state.selectedElementIds.push(id);
+        }
         updateUI();
+    } else {
+        // Select only this if not already in selection
+        if (!state.selectedElementIds.includes(id)) {
+            state.selectedElementIds = [id];
+            updateUI();
+        }
     }
 
     // Start drag
     saveState(); // Save state before dragging
     dragTarget = slideEl;
+
+    // Group drag setup
+    groupDragInitialPositions = [];
+    state.selectedElementIds.forEach(selectedId => {
+        const domEl = document.querySelector(`.slide-element[data-id="${selectedId}"]`);
+        if (domEl) {
+            const rect = domEl.getBoundingClientRect();
+            groupDragInitialPositions.push({
+                id: selectedId,
+                dom: domEl,
+                initialX: parseFloat(domEl.style.left) || 0,
+                initialY: parseFloat(domEl.style.top) || 0
+            });
+        }
+    });
+
     const rect = dragTarget.getBoundingClientRect();
 
     // Calculate relative offset within the element
@@ -362,11 +397,22 @@ document.addEventListener('mousemove', (e) => {
         if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
     } else {
         const containerRect = slideContainer.getBoundingClientRect();
-        let newX = e.clientX - containerRect.left - offsetX;
-        let newY = e.clientY - containerRect.top - offsetY;
+        let mainNewX = e.clientX - containerRect.left - offsetX;
+        let mainNewY = e.clientY - containerRect.top - offsetY;
 
-        dragTarget.style.left = `${newX}px`;
-        dragTarget.style.top = `${newY}px`;
+        const primaryInitial = groupDragInitialPositions.find(p => p.id === dragTarget.dataset.id);
+        if (primaryInitial) {
+            const dx = mainNewX - primaryInitial.initialX;
+            const dy = mainNewY - primaryInitial.initialY;
+
+            groupDragInitialPositions.forEach(pos => {
+                pos.dom.style.left = `${pos.initialX + dx}px`;
+                pos.dom.style.top = `${pos.initialY + dy}px`;
+            });
+        } else {
+            dragTarget.style.left = `${mainNewX}px`;
+            dragTarget.style.top = `${mainNewY}px`;
+        }
     }
   } else if (resizeTarget) {
     const dx = e.clientX - startMouse.x;
@@ -404,17 +450,18 @@ document.addEventListener('mousemove', (e) => {
 });
 
 colorPicker.addEventListener('change', (e) => {
-  if (state.selectedElementId) {
+  if (state.selectedElementIds.length > 0) {
     saveState();
-    const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-    if (stateEl) {
-      if (stateEl.type === 'text') stateEl.color = e.target.value;
-      if (stateEl.type === 'shape') {
-          stateEl.backgroundColor = `${e.target.value}33`; // 20% opacity approx
-          stateEl.borderColor = e.target.value;
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) {
+        if (el.type === 'text') el.color = e.target.value;
+        if (el.type === 'shape') {
+            el.backgroundColor = `${e.target.value}33`; // 20% opacity approx
+            el.borderColor = e.target.value;
+        }
       }
-      updateUI();
-    }
+    });
+    updateUI();
   }
 });
 
@@ -456,19 +503,21 @@ cropOption.addEventListener('click', () => {
 
 // Property Panel Event Listeners
 fontSelect.addEventListener('change', (e) => {
-    if (state.selectedElementId) {
+    if (state.selectedElementIds.length > 0) {
         saveState();
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-        if (stateEl) stateEl.fontFamily = e.target.value;
+        state.slides[state.currentSlide].forEach(el => {
+            if (state.selectedElementIds.includes(el.id)) el.fontFamily = e.target.value;
+        });
         updateUI();
     }
 });
 
 fontSizeInput.addEventListener('input', (e) => {
     if (fontSizeVal) fontSizeVal.textContent = e.target.value;
-    if (state.selectedElementId) {
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-        if (stateEl) stateEl.fontSize = e.target.value;
+    if (state.selectedElementIds.length > 0) {
+        state.slides[state.currentSlide].forEach(el => {
+            if (state.selectedElementIds.includes(el.id)) el.fontSize = e.target.value;
+        });
         updateUI();
     }
 });
@@ -478,90 +527,121 @@ fontSizeInput.addEventListener('change', (e) => {
 });
 
 fontWeightSelect.addEventListener('change', (e) => {
-    if (state.selectedElementId) {
+    if (state.selectedElementIds.length > 0) {
         saveState();
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-        if (stateEl) stateEl.fontWeight = e.target.value;
+        state.slides[state.currentSlide].forEach(el => {
+            if (state.selectedElementIds.includes(el.id)) el.fontWeight = e.target.value;
+        });
         updateUI();
     }
 });
 
 frontBtn.addEventListener('click', () => {
-    if (state.selectedElementId) {
+    if (state.selectedElementIds.length > 0) {
         saveState();
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-        if (stateEl) {
-            let maxZ = 0;
-            state.slides[state.currentSlide].forEach(el => {
-                if (el.zIndex > maxZ) maxZ = el.zIndex;
-            });
-            stateEl.zIndex = maxZ + 1;
-        }
+        let maxZ = 0;
+        state.slides[state.currentSlide].forEach(el => {
+            if (el.zIndex > maxZ) maxZ = el.zIndex;
+        });
+        state.slides[state.currentSlide].forEach(el => {
+            if (state.selectedElementIds.includes(el.id)) el.zIndex = maxZ + 1;
+        });
         updateUI();
     }
 });
 
 backBtn.addEventListener('click', () => {
-    if (state.selectedElementId) {
+    if (state.selectedElementIds.length > 0) {
         saveState();
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-        if (stateEl) {
-            let minZ = 9999;
-            state.slides[state.currentSlide].forEach(el => {
-                if (el.zIndex < minZ) minZ = el.zIndex;
-            });
-            stateEl.zIndex = (minZ === 9999 ? 0 : minZ) - 1;
-        }
+        let minZ = 9999;
+        state.slides[state.currentSlide].forEach(el => {
+            if (el.zIndex < minZ) minZ = el.zIndex;
+        });
+        state.slides[state.currentSlide].forEach(el => {
+            if (state.selectedElementIds.includes(el.id)) el.zIndex = (minZ === 9999 ? 0 : minZ) - 1;
+        });
         updateUI();
     }
 });
 
 // Alignment Logic
 function alignSelectedElement(type) {
-    if (!state.selectedElementId) return;
-    const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
-    if (!stateEl) return;
+    if (state.selectedElementIds.length === 0) return;
 
     const containerWidth = slideContainer.clientWidth;
     const containerHeight = slideContainer.clientHeight;
 
-    // Use stored width/height, fallback to default sizes if undefined
-    let elWidth = stateEl.width;
-    let elHeight = stateEl.height;
+    const selectedElements = state.slides[state.currentSlide].filter(item => state.selectedElementIds.includes(item.id));
 
-    // For text with auto height, we might need DOM calculation, but we rely on state if possible
-    if (stateEl.type === 'text') {
-       const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
-       if (domEl) {
-           const rect = domEl.getBoundingClientRect();
-           elWidth = rect.width;
-           elHeight = rect.height;
-       }
+    if (selectedElements.length === 1) {
+        // Align relative to slide container
+        const stateEl = selectedElements[0];
+        let elWidth = stateEl.width || 50;
+        let elHeight = stateEl.height || 30;
+        if (stateEl.type === 'text') {
+            const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
+            if (domEl) {
+                const rect = domEl.getBoundingClientRect();
+                elWidth = rect.width;
+                elHeight = rect.height;
+            }
+        }
+
+        switch(type) {
+            case 'left': stateEl.x = 0; break;
+            case 'centerX': stateEl.x = (containerWidth - elWidth) / 2; break;
+            case 'right': stateEl.x = containerWidth - elWidth; break;
+            case 'top': stateEl.y = 0; break;
+            case 'centerY': stateEl.y = (containerHeight - elHeight) / 2; break;
+            case 'bottom': stateEl.y = containerHeight - elHeight; break;
+        }
+    } else {
+        // Align relative to group bounding box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        // Calculate group bounding box
+        selectedElements.forEach(el => {
+            let elWidth = el.width || 50;
+            let elHeight = el.height || 30;
+            if (el.type === 'text') {
+                const domEl = document.querySelector(`.slide-element[data-id="${el.id}"]`);
+                if (domEl) {
+                    const rect = domEl.getBoundingClientRect();
+                    elWidth = rect.width;
+                    elHeight = rect.height;
+                }
+            }
+            minX = Math.min(minX, el.x);
+            minY = Math.min(minY, el.y);
+            maxX = Math.max(maxX, el.x + elWidth);
+            maxY = Math.max(maxY, el.y + elHeight);
+        });
+
+        const centerX = minX + (maxX - minX) / 2;
+        const centerY = minY + (maxY - minY) / 2;
+
+        selectedElements.forEach(stateEl => {
+            let elWidth = stateEl.width || 50;
+            let elHeight = stateEl.height || 30;
+            if (stateEl.type === 'text') {
+                const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
+                if (domEl) {
+                    elWidth = domEl.getBoundingClientRect().width;
+                    elHeight = domEl.getBoundingClientRect().height;
+                }
+            }
+
+            switch(type) {
+                case 'left': stateEl.x = minX; break;
+                case 'centerX': stateEl.x = centerX - (elWidth / 2); break;
+                case 'right': stateEl.x = maxX - elWidth; break;
+                case 'top': stateEl.y = minY; break;
+                case 'centerY': stateEl.y = centerY - (elHeight / 2); break;
+                case 'bottom': stateEl.y = maxY - elHeight; break;
+            }
+        });
     }
 
-    elWidth = elWidth || 50;
-    elHeight = elHeight || 30;
-
-    switch(type) {
-        case 'left':
-            stateEl.x = 0;
-            break;
-        case 'centerX':
-            stateEl.x = (containerWidth - elWidth) / 2;
-            break;
-        case 'right':
-            stateEl.x = containerWidth - elWidth;
-            break;
-        case 'top':
-            stateEl.y = 0;
-            break;
-        case 'centerY':
-            stateEl.y = (containerHeight - elHeight) / 2;
-            break;
-        case 'bottom':
-            stateEl.y = containerHeight - elHeight;
-            break;
-    }
     saveState();
     updateUI();
 }
@@ -596,22 +676,34 @@ importJsonInput.addEventListener('change', (e) => {
 
 document.addEventListener('mouseup', (e) => {
   if (dragTarget || resizeTarget) {
-    const target = dragTarget || resizeTarget;
-    const id = target.dataset.id;
-    const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
-    if (stateEl) {
-      stateEl.x = parseFloat(target.style.left);
-      stateEl.y = parseFloat(target.style.top);
+    if (dragTarget && groupDragInitialPositions.length > 0) {
+        groupDragInitialPositions.forEach(pos => {
+            const stateEl = state.slides[state.currentSlide].find(item => item.id === pos.id);
+            if (stateEl) {
+                stateEl.x = parseFloat(pos.dom.style.left);
+                stateEl.y = parseFloat(pos.dom.style.top);
+            }
+        });
+        saveState();
+    } else if (resizeTarget) {
+        const id = resizeTarget.dataset.id;
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+        if (stateEl) {
+          stateEl.x = parseFloat(resizeTarget.style.left);
+          stateEl.y = parseFloat(resizeTarget.style.top);
 
-      // Update dimensions explicitly for all element types
-      const computedStyle = getComputedStyle(target);
-      stateEl.width = parseFloat(computedStyle.width);
-      stateEl.height = parseFloat(computedStyle.height);
+          // Update dimensions explicitly for all element types
+          const computedStyle = getComputedStyle(resizeTarget);
+          stateEl.width = parseFloat(computedStyle.width);
+          stateEl.height = parseFloat(computedStyle.height);
 
-      saveState(); // Ensure state persists after movement/resize
+          saveState(); // Ensure state persists after movement/resize
+        }
     }
+
     dragTarget = null;
     resizeTarget = null;
     resizeCorner = null;
+    groupDragInitialPositions = [];
   }
 });

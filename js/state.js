@@ -1,7 +1,7 @@
 // --- Agent 2: Shared State Management ---
 let state = {
   currentSlide: 0,
-  selectedElementId: null,
+  selectedElementIds: [],
   slides: [
     [
       { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200, zIndex: 1 }
@@ -21,8 +21,14 @@ for (let i = localStorage.length - 1; i >= 0; i--) {
 const savedState = localStorage.getItem('cyberpunk_state');
 if (savedState) {
     try {
-        state = JSON.parse(savedState);
-        state.selectedElementId = null; // deselect on reload
+        const parsedState = JSON.parse(savedState);
+        // Safely migrate old state structure
+        if (parsedState.selectedElementId !== undefined) {
+            parsedState.selectedElementIds = [];
+            delete parsedState.selectedElementId;
+        }
+        parsedState.selectedElementIds = []; // deselect on reload
+        state = parsedState;
     } catch (e) {
         console.error("Failed to parse saved state", e);
     }
@@ -35,6 +41,7 @@ function saveToLocalStorage() {
 }
 
 function saveState() {
+  // Use deep copy to prevent reference mutation bugs in history stack
   historyStack.push(JSON.stringify(state));
   if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
   saveToLocalStorage(); // Auto-save on every state change
@@ -44,6 +51,9 @@ function undo() {
   if (historyStack.length > 0) {
     const prevState = historyStack.pop();
     state = JSON.parse(prevState);
+    // Explicitly reset selection during undo to avoid ghost handles
+    state.selectedElementIds = [];
+    saveToLocalStorage(); // Ensure un-done state is persisted
     if (typeof updateUI === 'function') {
         updateUI();
     }
@@ -69,7 +79,13 @@ function importStateFromJson(file) {
                 if (parsedState && parsedState.slides) {
                     saveState();
                     state = parsedState;
-                    state.selectedElementId = null;
+                    // Safely migrate old state structure
+                    if (state.selectedElementId !== undefined) {
+                        state.selectedElementIds = [];
+                        delete state.selectedElementId;
+                    }
+                    state.selectedElementIds = [];
+                    saveToLocalStorage();
                     if (typeof updateUI === 'function') {
                         updateUI();
                     }
