@@ -18,6 +18,12 @@ const fontWeightSelect = document.getElementById('fontWeightSelect');
 const frontBtn = document.getElementById('frontBtn');
 const backBtn = document.getElementById('backBtn');
 const startPresBtn = document.getElementById('startPresBtn');
+const alignLeftBtn = document.getElementById('alignLeftBtn');
+const alignCenterXBtn = document.getElementById('alignCenterXBtn');
+const alignRightBtn = document.getElementById('alignRightBtn');
+const alignTopBtn = document.getElementById('alignTopBtn');
+const alignCenterYBtn = document.getElementById('alignCenterYBtn');
+const alignBottomBtn = document.getElementById('alignBottomBtn');
 
 function updateUI() {
   slideIndicator.textContent = `Slide ${state.currentSlide + 1} / ${state.slides.length}`;
@@ -286,7 +292,7 @@ slideContainer.addEventListener('dblclick', (e) => {
 });
 
 // Initial render
-updateUI();
+document.addEventListener('DOMContentLoaded', updateUI);
 
 // --- Agent 3: Interaction & Drag-and-Drop ---
 let dragTarget = null;
@@ -510,6 +516,63 @@ backBtn.addEventListener('click', () => {
     }
 });
 
+// Alignment Logic
+function alignSelectedElement(type) {
+    if (!state.selectedElementId) return;
+    const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementId);
+    if (!stateEl) return;
+
+    const containerWidth = slideContainer.clientWidth;
+    const containerHeight = slideContainer.clientHeight;
+
+    // Use stored width/height, fallback to default sizes if undefined
+    let elWidth = stateEl.width;
+    let elHeight = stateEl.height;
+
+    // For text with auto height, we might need DOM calculation, but we rely on state if possible
+    if (stateEl.type === 'text') {
+       const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
+       if (domEl) {
+           const rect = domEl.getBoundingClientRect();
+           elWidth = rect.width;
+           elHeight = rect.height;
+       }
+    }
+
+    elWidth = elWidth || 50;
+    elHeight = elHeight || 30;
+
+    switch(type) {
+        case 'left':
+            stateEl.x = 0;
+            break;
+        case 'centerX':
+            stateEl.x = (containerWidth - elWidth) / 2;
+            break;
+        case 'right':
+            stateEl.x = containerWidth - elWidth;
+            break;
+        case 'top':
+            stateEl.y = 0;
+            break;
+        case 'centerY':
+            stateEl.y = (containerHeight - elHeight) / 2;
+            break;
+        case 'bottom':
+            stateEl.y = containerHeight - elHeight;
+            break;
+    }
+    saveState();
+    updateUI();
+}
+
+alignLeftBtn.addEventListener('click', () => alignSelectedElement('left'));
+alignCenterXBtn.addEventListener('click', () => alignSelectedElement('centerX'));
+alignRightBtn.addEventListener('click', () => alignSelectedElement('right'));
+alignTopBtn.addEventListener('click', () => alignSelectedElement('top'));
+alignCenterYBtn.addEventListener('click', () => alignSelectedElement('centerY'));
+alignBottomBtn.addEventListener('click', () => alignSelectedElement('bottom'));
+
 
 const exportJsonBtn = document.getElementById('exportJsonBtn');
 const importJsonBtn = document.getElementById('importJsonBtn');
@@ -544,6 +607,8 @@ document.addEventListener('mouseup', (e) => {
       const computedStyle = getComputedStyle(target);
       stateEl.width = parseFloat(computedStyle.width);
       stateEl.height = parseFloat(computedStyle.height);
+
+      saveState(); // Ensure state persists after movement/resize
     }
     dragTarget = null;
     resizeTarget = null;

@@ -58,8 +58,6 @@ function drawGlitch() {
   ctx.fillStyle = '#050505';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = '#00f2ff'; // Cyan
-
   const time = Date.now();
 
   // Calculate a global ECG-style heartbeat spike
@@ -78,12 +76,17 @@ function drawGlitch() {
     if (block.edge === 0 || block.edge === 1) posOnEdge = block.baseX / canvas.width;
     else posOnEdge = block.baseY / canvas.height;
 
-    // Local, high-frequency "static" waves for the edges
-    const wave1 = Math.sin(posOnEdge * 50 + time / 150);
-    const wave2 = Math.sin(posOnEdge * 20 - time / 220);
-    const localNoise = Math.max(0, (wave1 + wave2) / 2);
+    // Gaming RGB Neon calculation
+    // Shift the hue slowly over time and position
+    const hue = (posOnEdge * 360 + time / 20) % 360;
+    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = ctx.fillStyle;
 
-    const combinedPulse = Math.max(0, localNoise * 0.5 + globalPulse);
+    // Smooth undulating wave flowing along edges + static noise + spikes
+    const smoothWave = Math.sin(posOnEdge * Math.PI * 4 + time / 500);
+    const localNoise = Math.sin(posOnEdge * 50 + time / 150) * 0.5;
+    const combinedPulse = Math.max(0, smoothWave * 0.5 + localNoise + globalPulse);
 
     // Occasional unpredictable spikes per block
     let spikeMultiplier = 1;
@@ -112,6 +115,9 @@ function drawGlitch() {
     ctx.fillRect(block.baseX + offsetX - (drawWidth - block.width)/2,
                  block.baseY + offsetY - (drawHeight - block.height)/2,
                  drawWidth, drawHeight);
+
+    // Reset shadow for next draw to prevent compound lag/artifacting if mixed
+    ctx.shadowBlur = 0;
   });
 
   ctx.globalAlpha = 1.0;

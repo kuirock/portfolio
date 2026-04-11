@@ -88,4 +88,4 @@ document.addEventListener('dblclick', () => {
 });
 
 // Initial render
-updateUI();
+document.addEventListener('DOMContentLoaded', updateUI);
