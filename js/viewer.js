@@ -17,6 +17,7 @@ function renderSlide() {
 
     if (el.type === 'text') {
       div.textContent = el.content;
+      div.classList.add('glitch-text'); // Add glitch effect
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;

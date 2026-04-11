@@ -204,6 +204,7 @@ function renderSlide() {
       div.textContent = el.content;
       div.contentEditable = "false"; // Set to false initially, enable on dblclick
       div.style.cursor = "move"; // Explicit cursor
+      div.classList.add('glitch-text'); // Add glitch effect
       if (el.color) div.style.color = el.color;
       if (el.fontFamily) div.style.fontFamily = el.fontFamily;
       if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
@@ -476,13 +477,7 @@ const importJsonBtn = document.getElementById('importJsonBtn');
 const importJsonInput = document.getElementById('importJsonInput');
 
 exportJsonBtn.addEventListener('click', () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "cyberpunk_presentation.json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    exportStateToJson();
 });
 
 importJsonBtn.addEventListener('click', () => {
@@ -492,22 +487,7 @@ importJsonBtn.addEventListener('click', () => {
 importJsonInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const parsedState = JSON.parse(event.target.result);
-                if (parsedState && parsedState.slides) {
-                    saveState();
-                    state = parsedState;
-                    state.selectedElementId = null; // deselect everything
-                    updateUI();
-                }
-            } catch(e) {
-                console.error("Error parsing JSON file", e);
-                alert("Invalid JSON file.");
-            }
-        };
-        reader.readAsText(file);
+        importStateFromJson(file);
     }
     e.target.value = ''; // reset
 });

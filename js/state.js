@@ -48,5 +48,38 @@ function undo() {
   }
 }
 
+function exportStateToJson() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "cyberpunk_presentation.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function importStateFromJson(file) {
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const parsedState = JSON.parse(event.target.result);
+                if (parsedState && parsedState.slides) {
+                    saveState();
+                    state = parsedState;
+                    state.selectedElementId = null;
+                    if (typeof updateUI === 'function') {
+                        updateUI();
+                    }
+                }
+            } catch(e) {
+                console.error("Error parsing JSON file", e);
+                alert("Invalid JSON file.");
+            }
+        };
+        reader.readAsText(file);
+    }
+}
+
 // Initial save
 saveState();

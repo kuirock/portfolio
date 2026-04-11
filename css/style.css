@@ -90,7 +90,36 @@ body {
   outline: none;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow: hidden; /* Ensure resized text boxes wrap/clip properly */
   border: 1px dashed transparent;
+}
+
+/* Subtle Text Glitch Effect */
+.glitch-text {
+  animation: textGlitch 4s infinite alternate;
+}
+
+@keyframes textGlitch {
+  0%, 95% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+  96% {
+    text-shadow: 2px 0 0 rgba(0, 242, 255, 0.7), -2px 0 0 rgba(255, 0, 100, 0.7);
+    transform: translate(-1px, 1px);
+  }
+  97% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+  98% {
+    text-shadow: -2px 0 0 rgba(0, 242, 255, 0.7), 2px 0 0 rgba(255, 0, 100, 0.7);
+    transform: translate(1px, -1px);
+  }
+  99% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
 }
 
 .slide-element.text:focus, .slide-element.text:hover {
