@@ -440,7 +440,6 @@ let groupDragInitialPositions = [];
 let clipboard = [];
 
 // Property Panel Dragging
-const propertyPanel = document.getElementById('propertyPanel');
 const propertyPanelHeader = document.getElementById('propertyPanelHeader');
 let isDraggingPanel = false;
 let panelOffsetX = 0;
