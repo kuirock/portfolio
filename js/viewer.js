@@ -1,4 +1,14 @@
 const slideContainer = document.getElementById('slideContainer');
+let currentScale = 1;
+function resizeContainer() {
+    const margin = 40;
+    const scaleX = (window.innerWidth - margin) / 1280;
+    const scaleY = (window.innerHeight - margin) / 720;
+    currentScale = Math.min(scaleX, scaleY, 1);
+    slideContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+}
+window.addEventListener('resize', resizeContainer);
+resizeContainer();
 
 function updateUI() {
     renderSlide();
