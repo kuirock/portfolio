@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;700&family=Orbitron:wght@400;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
   <!-- Canvas for Agent 1 -->
   <canvas id="glitchCanvas"></canvas>
@@ -45,44 +52,48 @@
       <label>Font:</label>
       <select id="fontSelect">
         <option value="'Courier New', Courier, monospace">Courier</option>
-        <option value="'DotGothic16', sans-serif">DotGothic16</option>
         <option value="'ＭＳ ゴシック', sans-serif">MS Gothic</option>
         <option value="Arial, sans-serif">Arial</option>
         <option value="'Times New Roman', serif">Times</option>
-      </select>
+        <option value="'Orbitron', sans-serif">Orbitron (サイバー)</option>
+        <option value="'DotGothic16', sans-serif">DotGothic (ドット絵)</option>
+        <option value="'Noto Sans JP', sans-serif">Noto Sans JP (ゴシック)</option>
+        <option value="Impact, fantasy">Impact (極太)</option>
     </div>
-    <div class="panel-group">
-      <label>Size: <span id="fontSizeVal">24</span>px</label>
-      <input type="range" id="fontSizeInput" min="10" max="150" value="24" style="width: 100px;">
-    </div>
-    <div class="panel-group">
-      <label>Weight:</label>
-      <select id="fontWeightSelect">
-        <option value="normal">Normal</option>
-        <option value="bold">Bold</option>
-      </select>
-    </div>
-    <div class="panel-group">
-      <button id="frontBtn">Bring to Front</button>
-      <button id="backBtn">Send to Back</button>
-    </div>
-    <div class="panel-group" id="gamingColorGroup" style="display: none;">
-      <label><input type="checkbox" id="gamingColorCheckbox"> Gaming Color</label>
-    </div>
-    <div class="panel-group align-group">
-      <label>Align X:</label>
-      <button id="alignLeftBtn">|◀</button>
-      <button id="alignCenterXBtn">▶|◀</button>
-      <button id="alignRightBtn">▶|</button>
-      <button id="distributeXBtn" title="Distribute Horizontally">≡↔≡</button>
-    </div>
-    <div class="panel-group align-group">
-      <label>Align Y:</label>
-      <button id="alignTopBtn">▲</button>
-      <button id="alignCenterYBtn">▼▲</button>
-      <button id="alignBottomBtn">▼</button>
-      <button id="distributeYBtn" title="Distribute Vertically">≡↕≡</button>
-    </div>
+    </select>
+  </div>
+  <div class="panel-group">
+    <label>Size: <span id="fontSizeVal">24</span>px</label>
+    <input type="range" id="fontSizeInput" min="10" max="150" value="24" style="width: 100px;">
+  </div>
+  <div class="panel-group">
+    <label>Weight:</label>
+    <select id="fontWeightSelect">
+      <option value="normal">Normal</option>
+      <option value="bold">Bold</option>
+    </select>
+  </div>
+  <div class="panel-group">
+    <button id="frontBtn">Bring to Front</button>
+    <button id="backBtn">Send to Back</button>
+  </div>
+  <div class="panel-group" id="gamingColorGroup" style="display: none;">
+    <label><input type="checkbox" id="gamingColorCheckbox"> Gaming Color</label>
+  </div>
+  <div class="panel-group align-group">
+    <label>Align X:</label>
+    <button id="alignLeftBtn">|◀</button>
+    <button id="alignCenterXBtn">▶|◀</button>
+    <button id="alignRightBtn">▶|</button>
+    <button id="distributeXBtn" title="Distribute Horizontally">≡↔≡</button>
+  </div>
+  <div class="panel-group align-group">
+    <label>Align Y:</label>
+    <button id="alignTopBtn">▲</button>
+    <button id="alignCenterYBtn">▼▲</button>
+    <button id="alignBottomBtn">▼</button>
+    <button id="distributeYBtn" title="Distribute Vertically">≡↕≡</button>
+  </div>
   </div>
 
   <!-- Custom Context Menu for Image Trimming -->
@@ -94,4 +105,5 @@
   <script src="js/background.js"></script>
   <script src="js/editor.js"></script>
 </body>
+
 </html>

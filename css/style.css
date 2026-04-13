@@ -7,9 +7,12 @@
 body {
   margin: 0;
   overflow: hidden;
-  background-color: #050505; /* Dark tone close to black */
-  font-family: 'Courier New', Courier, monospace; /* Hacker-style monospace */
-  color: #00f2ff; /* Cyan base */
+  background-color: #050505;
+  /* Dark tone close to black */
+  font-family: 'Courier New', Courier, monospace;
+  /* Hacker-style monospace */
+  color: #00f2ff;
+  /* Cyan base */
 }
 
 /* Agent 1 Canvas */
@@ -19,7 +22,8 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: -1; /* Bottom-most layer */
+  z-index: -1;
+  /* Bottom-most layer */
 }
 
 /* Agent 2 Slide Container */
@@ -31,8 +35,10 @@ body {
   transform: translate(-50%, -50%) scale(1);
   width: 1280px;
   height: 720px;
-  background: rgba(0, 20, 20, 0.4); /* Semi-transparent */
-  backdrop-filter: blur(10px); /* Blur effect */
+  background: rgba(0, 20, 20, 0.4);
+  /* Semi-transparent */
+  backdrop-filter: blur(10px);
+  /* Blur effect */
   border: 1px solid #00f2ff;
   box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
   overflow: hidden;
@@ -42,7 +48,8 @@ body {
 /* Presentation elements within the slide */
 .slide-element {
   position: absolute;
-  cursor: move; /* Indicate draggable */
+  cursor: move;
+  /* Indicate draggable */
   user-select: none;
 }
 
@@ -56,11 +63,8 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  pointer-events: none; /* Prevent img drag to allow element drag */
-}
-
-.slide-element img.cropped {
-  /* Replaced simple circular crop with robust PPTX-like object-fit rendering applied directly in JS */
+  pointer-events: none;
+  /* Prevent img drag to allow element drag */
 }
 
 .slide-element.image {
@@ -74,12 +78,33 @@ body {
   height: 12px;
   background: #00f2ff;
   border: 1px solid #000;
-  z-index: 20; /* High z-index to sit above text */
+  z-index: 20;
+  /* High z-index to sit above text */
 }
-.resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
-.resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
-.resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-.resize-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+.resize-handle.nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.resize-handle.ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.resize-handle.sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+.resize-handle.se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
 
 
 .slide-element.text {
@@ -94,7 +119,8 @@ body {
 
 .text-content {
   width: 100%;
-  height: auto; /* Fix text cutoff */
+  height: auto;
+  /* Fix text cutoff */
   white-space: pre-wrap;
   word-wrap: break-word;
   outline: none;
@@ -109,43 +135,71 @@ body {
   background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
   background-size: 400%;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: gamingColor 3s linear infinite;
 }
 
 @keyframes gamingColor {
-  0% { background-position: 0%; }
-  100% { background-position: 400%; }
+  0% {
+    background-position: 0%;
+  }
+
+  100% {
+    background-position: 400%;
+  }
 }
 
 @keyframes textGlitch {
-  0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% {
+
+  0%,
+  10%,
+  20%,
+  30%,
+  40%,
+  50%,
+  60%,
+  70%,
+  80%,
+  90%,
+  100% {
     text-shadow: none;
     transform: translate(0, 0);
   }
-  5%, 55% {
+
+  5%,
+  55% {
     text-shadow: 5px 0 0 #ff0000, -5px 0 0 #0000ff;
-    transform: translate(-3px, 0);
+    transform: translate(-1.5px, 0);
   }
-  15%, 65% {
+
+  15%,
+  65% {
     text-shadow: -4px 0 0 #ff0000, 4px 0 0 #0000ff;
-    transform: translate(3px, 0);
+    transform: translate(1.5px, 0);
   }
-  25%, 75% {
+
+  25%,
+  75% {
     text-shadow: 3px 0 0 #ff0000, -3px 0 0 #0000ff;
-    transform: translate(-1px, 2px);
+    transform: translate(-0.5px, 1px);
   }
-  35%, 85% {
+
+  35%,
+  85% {
     text-shadow: -6px 0 0 #ff0000, 6px 0 0 #0000ff;
-    transform: translate(2px, -2px);
+    transform: translate(1px, -1px);
   }
-  45%, 95% {
+
+  45%,
+  95% {
     text-shadow: 2px 0 0 #ff0000, -2px 0 0 #0000ff;
-    transform: translate(-2px, 0);
+    transform: translate(-1px, 0);
   }
 }
 
-.slide-element.text:focus, .slide-element.text:hover {
+.slide-element.text:focus,
+.slide-element.text:hover {
   border-color: rgba(0, 242, 255, 0.5);
   background: rgba(0, 242, 255, 0.1);
 }
@@ -159,15 +213,52 @@ body {
 }
 
 @keyframes shapeGlitch {
-  0%   { opacity: 1; transform: translate(0, 0); }
-  2%   { opacity: 0.8; transform: translate(-2px, 1px); background-color: rgba(0, 242, 255, 0.4); }
-  4%   { opacity: 1; transform: translate(2px, -1px); }
-  6%   { opacity: 0.9; transform: translate(0, 0); background-color: rgba(0, 242, 255, 0.2); }
-  45%  { opacity: 1; transform: translate(0, 0); }
-  46%  { opacity: 0.7; transform: translate(1px, 2px); }
-  48%  { opacity: 1; transform: translate(-1px, -2px); }
-  50%  { opacity: 1; transform: translate(0, 0); }
-  100% { opacity: 1; transform: translate(0, 0); }
+  0% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  2% {
+    opacity: 0.8;
+    transform: translate(-2px, 1px);
+    background-color: rgba(0, 242, 255, 0.4);
+  }
+
+  4% {
+    opacity: 1;
+    transform: translate(2px, -1px);
+  }
+
+  6% {
+    opacity: 0.9;
+    transform: translate(0, 0);
+    background-color: rgba(0, 242, 255, 0.2);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  46% {
+    opacity: 0.7;
+    transform: translate(1px, 2px);
+  }
+
+  48% {
+    opacity: 1;
+    transform: translate(-1px, -2px);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
 }
 
 .slide-element.shape::before {
@@ -177,13 +268,11 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.15) 2px,
-    rgba(0, 0, 0, 0.15) 4px
-  );
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 4px);
   pointer-events: none;
   z-index: 1;
 }
@@ -268,7 +357,8 @@ body {
   gap: 10px;
 }
 
-.property-panel input, .property-panel select {
+.property-panel input,
+.property-panel select {
   background: #000;
   color: #00f2ff;
   border: 1px solid #00f2ff;
