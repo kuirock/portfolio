@@ -38,35 +38,35 @@ function updateUI() {
 
   // Populate Property Panel if exactly 1 element is selected
   if (state.selectedElementIds.length === 1) {
-      const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementIds[0]);
-      if (stateEl) {
-          propertyPanel.style.display = 'flex';
-          if (stateEl.type === 'text') {
-              fontSelect.value = stateEl.fontFamily || "'Courier New', Courier, monospace";
-              fontSizeInput.value = stateEl.fontSize || 24;
-              if (fontSizeVal) fontSizeVal.textContent = stateEl.fontSize || 24;
-              fontWeightSelect.value = stateEl.fontWeight || "normal";
-              gamingColorCheckbox.checked = !!stateEl.isGamingColor;
-              fontSelect.parentElement.style.display = 'flex';
-              fontSizeInput.parentElement.style.display = 'flex';
-              fontWeightSelect.parentElement.style.display = 'flex';
-              gamingColorGroup.style.display = 'flex';
-          } else {
-              fontSelect.parentElement.style.display = 'none';
-              fontSizeInput.parentElement.style.display = 'none';
-              fontWeightSelect.parentElement.style.display = 'none';
-              gamingColorGroup.style.display = 'none';
-          }
-      }
-  } else if (state.selectedElementIds.length > 1) {
-      // For multiple elements, hide specific properties but allow alignment
+    const stateEl = state.slides[state.currentSlide].find(item => item.id === state.selectedElementIds[0]);
+    if (stateEl) {
       propertyPanel.style.display = 'flex';
-      fontSelect.parentElement.style.display = 'none';
-      fontSizeInput.parentElement.style.display = 'none';
-      fontWeightSelect.parentElement.style.display = 'none';
-      gamingColorGroup.style.display = 'none';
+      if (stateEl.type === 'text') {
+        fontSelect.value = stateEl.fontFamily || "'Courier New', Courier, monospace";
+        fontSizeInput.value = stateEl.fontSize || 24;
+        if (fontSizeVal) fontSizeVal.textContent = stateEl.fontSize || 24;
+        fontWeightSelect.value = stateEl.fontWeight || "normal";
+        gamingColorCheckbox.checked = !!stateEl.isGamingColor;
+        fontSelect.parentElement.style.display = 'flex';
+        fontSizeInput.parentElement.style.display = 'flex';
+        fontWeightSelect.parentElement.style.display = 'flex';
+        gamingColorGroup.style.display = 'flex';
+      } else {
+        fontSelect.parentElement.style.display = 'none';
+        fontSizeInput.parentElement.style.display = 'none';
+        fontWeightSelect.parentElement.style.display = 'none';
+        gamingColorGroup.style.display = 'none';
+      }
+    }
+  } else if (state.selectedElementIds.length > 1) {
+    // For multiple elements, hide specific properties but allow alignment
+    propertyPanel.style.display = 'flex';
+    fontSelect.parentElement.style.display = 'none';
+    fontSizeInput.parentElement.style.display = 'none';
+    fontWeightSelect.parentElement.style.display = 'none';
+    gamingColorGroup.style.display = 'none';
   } else {
-      propertyPanel.style.display = 'none';
+    propertyPanel.style.display = 'none';
   }
 }
 
@@ -134,8 +134,8 @@ moveSlideRightBtn.addEventListener('click', () => {
 undoBtn.addEventListener('click', undo);
 
 startPresBtn.addEventListener('click', () => {
-    saveToLocalStorage(); // Ensure latest is saved
-    window.open('viewer.html', '_blank');
+  saveToLocalStorage(); // Ensure latest is saved
+  window.open('viewer.html', '_blank');
 });
 
 document.addEventListener('keydown', (e) => {
@@ -146,9 +146,9 @@ document.addEventListener('keydown', (e) => {
 
   // Save shortcut
   if (e.ctrlKey && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      saveToLocalStorage();
-      return;
+    e.preventDefault();
+    saveToLocalStorage();
+    return;
   }
   // Undo shortcut
   if (e.ctrlKey && e.key === 'z') {
@@ -199,8 +199,8 @@ document.addEventListener('keydown', (e) => {
       // Also update clipboard so next paste offsets again
       clipboard = JSON.parse(JSON.stringify(clipboard));
       clipboard.forEach(el => {
-          el.x += 20;
-          el.y += 20;
+        el.x += 20;
+        el.y += 20;
       });
 
       updateUI();
@@ -294,7 +294,7 @@ function renderSlide() {
 
       div.classList.add('glitch-text'); // Add glitch effect
       if (el.isGamingColor) {
-          textInner.classList.add('gaming-text-fx');
+        textInner.classList.add('gaming-text-fx');
       }
 
       if (el.color) div.style.color = el.color;
@@ -314,9 +314,9 @@ function renderSlide() {
       });
       // Save state when finishing edit
       textInner.addEventListener('blur', () => {
-          textInner.contentEditable = "false";
-          textInner.style.cursor = "move";
-          saveState();
+        textInner.contentEditable = "false";
+        textInner.style.cursor = "move";
+        saveState();
       });
       div.appendChild(textInner);
     } else if (el.type === 'shape') {
@@ -340,22 +340,22 @@ function renderSlide() {
       img.style.objectPosition = `${cropX}% ${cropY}%`;
 
       if (el.cropMode) {
-          // Visual indicator for crop mode
-          div.style.outline = "2px dashed #ff00ff";
+        // Visual indicator for crop mode
+        div.style.outline = "2px dashed #ff00ff";
       }
       div.appendChild(img);
     }
 
     if (state.selectedElementIds.includes(el.id)) {
-        div.classList.add('selected');
+      div.classList.add('selected');
 
-        // Add resize handles after all internal DOM nodes (like textContent or img) have been created
-        ['nw', 'ne', 'sw', 'se'].forEach(corner => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle ${corner}`;
-            handle.dataset.corner = corner;
-            div.appendChild(handle);
-        });
+      // Add resize handles after all internal DOM nodes (like textContent or img) have been created
+      ['nw', 'ne', 'sw', 'se'].forEach(corner => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${corner}`;
+        handle.dataset.corner = corner;
+        div.appendChild(handle);
+      });
     }
 
     slideContainer.appendChild(div);
@@ -373,18 +373,18 @@ slideContainer.addEventListener('dblclick', (e) => {
       updateUI();
     }
   } else if (e.target.classList.contains('text-content')) {
-      // Edit text inner wrapper
-      e.target.contentEditable = "true";
-      e.target.style.cursor = "text";
-      e.target.focus();
+    // Edit text inner wrapper
+    e.target.contentEditable = "true";
+    e.target.style.cursor = "text";
+    e.target.focus();
 
-      // Move cursor to end
-      const range = document.createRange();
-      const sel = window.getSelection();
-      range.selectNodeContents(e.target);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
+    // Move cursor to end
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(e.target);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
 });
 
@@ -403,39 +403,38 @@ let groupDragInitialPositions = [];
 let clipboard = [];
 
 // Property Panel Dragging
-const propertyPanel = document.getElementById('propertyPanel');
 const propertyPanelHeader = document.getElementById('propertyPanelHeader');
 let isDraggingPanel = false;
 let panelOffsetX = 0;
 let panelOffsetY = 0;
 
 propertyPanelHeader.addEventListener('mousedown', (e) => {
-    isDraggingPanel = true;
-    const rect = propertyPanel.getBoundingClientRect();
-    panelOffsetX = e.clientX - rect.left;
-    panelOffsetY = e.clientY - rect.top;
+  isDraggingPanel = true;
+  const rect = propertyPanel.getBoundingClientRect();
+  panelOffsetX = e.clientX - rect.left;
+  panelOffsetY = e.clientY - rect.top;
 
-    // Switch from right/top to left/top to avoid sizing issues during drag
-    propertyPanel.style.right = 'auto';
-    propertyPanel.style.left = `${rect.left}px`;
-    propertyPanel.style.top = `${rect.top}px`;
+  // Switch from right/top to left/top to avoid sizing issues during drag
+  propertyPanel.style.right = 'auto';
+  propertyPanel.style.left = `${rect.left}px`;
+  propertyPanel.style.top = `${rect.top}px`;
 });
 
 document.addEventListener('mousemove', (e) => {
-    if (isDraggingPanel) {
-        propertyPanel.style.left = `${e.clientX - panelOffsetX}px`;
-        propertyPanel.style.top = `${e.clientY - panelOffsetY}px`;
-    }
+  if (isDraggingPanel) {
+    propertyPanel.style.left = `${e.clientX - panelOffsetX}px`;
+    propertyPanel.style.top = `${e.clientY - panelOffsetY}px`;
+  }
 });
 
 document.addEventListener('mouseup', () => {
-    isDraggingPanel = false;
+  isDraggingPanel = false;
 });
 
 slideContainer.addEventListener('mousedown', (e) => {
   // Fix text selection drag conflict: prevent drag initialization if clicking inside an actively editable text element
   if (e.target.isContentEditable || e.target.closest('[contenteditable="true"]')) {
-      return;
+    return;
   }
 
   // Handle click on slide container background to deselect
@@ -459,19 +458,19 @@ slideContainer.addEventListener('mousedown', (e) => {
   if (slideEl) {
     const id = slideEl.dataset.id;
     if (e.shiftKey) {
-        // Toggle selection
-        if (state.selectedElementIds.includes(id)) {
-            state.selectedElementIds = state.selectedElementIds.filter(i => i !== id);
-        } else {
-            state.selectedElementIds.push(id);
-        }
-        updateUI();
+      // Toggle selection
+      if (state.selectedElementIds.includes(id)) {
+        state.selectedElementIds = state.selectedElementIds.filter(i => i !== id);
+      } else {
+        state.selectedElementIds.push(id);
+      }
+      updateUI();
     } else {
-        // Select only this if not already in selection
-        if (!state.selectedElementIds.includes(id)) {
-            state.selectedElementIds = [id];
-            updateUI();
-        }
+      // Select only this if not already in selection
+      if (!state.selectedElementIds.includes(id)) {
+        state.selectedElementIds = [id];
+        updateUI();
+      }
     }
 
     // Start drag
@@ -482,15 +481,15 @@ slideContainer.addEventListener('mousedown', (e) => {
     // Group drag setup
     groupDragInitialPositions = [];
     state.selectedElementIds.forEach(selectedId => {
-        const domEl = document.querySelector(`.slide-element[data-id="${selectedId}"]`);
-        if (domEl) {
-            groupDragInitialPositions.push({
-                id: selectedId,
-                dom: domEl,
-                initialX: parseFloat(domEl.style.left) || 0,
-                initialY: parseFloat(domEl.style.top) || 0
-            });
-        }
+      const domEl = document.querySelector(`.slide-element[data-id="${selectedId}"]`);
+      if (domEl) {
+        groupDragInitialPositions.push({
+          id: selectedId,
+          dom: domEl,
+          initialX: parseFloat(domEl.style.left) || 0,
+          initialY: parseFloat(domEl.style.top) || 0
+        });
+      }
     });
   }
 });
@@ -500,32 +499,32 @@ document.addEventListener('mousemove', (e) => {
     const stateEl = state.slides[state.currentSlide].find(item => item.id === dragTarget.dataset.id);
 
     if (stateEl && stateEl.cropMode) {
-        // Adjust the object-position (cropX, cropY) instead of moving container
-        const dx = e.movementX * -0.5; // Sensitivity multiplier
-        const dy = e.movementY * -0.5;
+      // Adjust the object-position (cropX, cropY) instead of moving container
+      const dx = e.movementX * -0.5; // Sensitivity multiplier
+      const dy = e.movementY * -0.5;
 
-        let newCropX = (stateEl.cropX || 50) + dx;
-        let newCropY = (stateEl.cropY || 50) + dy;
+      let newCropX = (stateEl.cropX || 50) + dx;
+      let newCropY = (stateEl.cropY || 50) + dy;
 
-        // Clamp between 0 and 100%
-        newCropX = Math.max(0, Math.min(100, newCropX));
-        newCropY = Math.max(0, Math.min(100, newCropY));
+      // Clamp between 0 and 100%
+      newCropX = Math.max(0, Math.min(100, newCropX));
+      newCropY = Math.max(0, Math.min(100, newCropY));
 
-        stateEl.cropX = newCropX;
-        stateEl.cropY = newCropY;
+      stateEl.cropX = newCropX;
+      stateEl.cropY = newCropY;
 
-        const img = dragTarget.querySelector('img');
-        if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
+      const img = dragTarget.querySelector('img');
+      if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
     } else {
-        const dx = e.clientX - startMouse.x;
-        const dy = e.clientY - startMouse.y;
+      const dx = e.clientX - startMouse.x;
+      const dy = e.clientY - startMouse.y;
 
-        if (groupDragInitialPositions.length > 0) {
-            groupDragInitialPositions.forEach(pos => {
-                pos.dom.style.left = `${pos.initialX + dx}px`;
-                pos.dom.style.top = `${pos.initialY + dy}px`;
-            });
-        }
+      if (groupDragInitialPositions.length > 0) {
+        groupDragInitialPositions.forEach(pos => {
+          pos.dom.style.left = `${pos.initialX + dx}px`;
+          pos.dom.style.top = `${pos.initialY + dy}px`;
+        });
+      }
     }
   } else if (resizeTarget) {
     const dx = e.clientX - startMouse.x;
@@ -539,12 +538,12 @@ document.addEventListener('mousemove', (e) => {
     if (resizeCorner.includes('e')) newWidth = startRect.width + dx;
     if (resizeCorner.includes('s')) newHeight = startRect.height + dy;
     if (resizeCorner.includes('w')) {
-        newWidth = startRect.width - dx;
-        newLeft = startRect.left + dx;
+      newWidth = startRect.width - dx;
+      newLeft = startRect.left + dx;
     }
     if (resizeCorner.includes('n')) {
-        newHeight = startRect.height - dy;
-        newTop = startRect.top + dy;
+      newHeight = startRect.height - dy;
+      newTop = startRect.top + dy;
     }
 
     // Enforce minimum size
@@ -552,12 +551,12 @@ document.addEventListener('mousemove', (e) => {
     const minHeight = resizeTarget.classList.contains('text') ? 30 : 20;
 
     if (newWidth > minWidth && newHeight > minHeight) {
-        resizeTarget.style.width = `${newWidth}px`;
-        resizeTarget.style.height = `${newHeight}px`;
+      resizeTarget.style.width = `${newWidth}px`;
+      resizeTarget.style.height = `${newHeight}px`;
 
-        const containerRect = slideContainer.getBoundingClientRect();
-        resizeTarget.style.left = `${newLeft - containerRect.left}px`;
-        resizeTarget.style.top = `${newTop - containerRect.top}px`;
+      const containerRect = slideContainer.getBoundingClientRect();
+      resizeTarget.style.left = `${newLeft - containerRect.left}px`;
+      resizeTarget.style.top = `${newTop - containerRect.top}px`;
     }
   }
 });
@@ -571,8 +570,8 @@ colorPicker.addEventListener('change', (e) => {
       if (state.selectedElementIds.includes(el.id)) {
         if (el.type === 'text') el.color = e.target.value;
         if (el.type === 'shape') {
-            el.backgroundColor = `${e.target.value}33`; // 20% opacity approx
-            el.borderColor = e.target.value;
+          el.backgroundColor = `${e.target.value}33`; // 20% opacity approx
+          el.borderColor = e.target.value;
         }
       }
     });
@@ -588,266 +587,266 @@ slideContainer.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   const slideEl = e.target.closest('.slide-element');
   if (slideEl && slideEl.classList.contains('image')) {
-      contextMenuTargetId = slideEl.dataset.id;
-      contextMenu.style.display = 'block';
-      contextMenu.style.left = `${e.clientX}px`;
-      contextMenu.style.top = `${e.clientY}px`;
+    contextMenuTargetId = slideEl.dataset.id;
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = `${e.clientX}px`;
+    contextMenu.style.top = `${e.clientY}px`;
   } else {
-      contextMenu.style.display = 'none';
+    contextMenu.style.display = 'none';
   }
 });
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.context-menu')) {
-      contextMenu.style.display = 'none';
+    contextMenu.style.display = 'none';
   }
 });
 
 cropOption.addEventListener('click', () => {
-    if (contextMenuTargetId) {
-        saveState();
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === contextMenuTargetId);
-        if (stateEl && stateEl.type === 'image') {
-            stateEl.cropMode = !stateEl.cropMode;
-            updateUI();
-        }
+  if (contextMenuTargetId) {
+    saveState();
+    const stateEl = state.slides[state.currentSlide].find(item => item.id === contextMenuTargetId);
+    if (stateEl && stateEl.type === 'image') {
+      stateEl.cropMode = !stateEl.cropMode;
+      updateUI();
     }
-    contextMenu.style.display = 'none';
+  }
+  contextMenu.style.display = 'none';
 });
 
 
 // Property Panel Event Listeners
 function applyRichTextCommand(command, value = null) {
-    const sel = window.getSelection();
-    if (sel.rangeCount > 0 && !sel.isCollapsed) {
-        const range = sel.getRangeAt(0);
-        let commonAncestor = range.commonAncestorContainer;
-        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode; // Get element if text node
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && !sel.isCollapsed) {
+    const range = sel.getRangeAt(0);
+    let commonAncestor = range.commonAncestorContainer;
+    if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode; // Get element if text node
 
-        // Ensure we are inside a contenteditable text element
-        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
-            document.execCommand(command, false, value);
+    // Ensure we are inside a contenteditable text element
+    if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+      document.execCommand(command, false, value);
 
-            // Sync the updated innerHTML back to state
-            const textContentEl = commonAncestor.closest('.text-content');
-            if (textContentEl) {
-                const id = textContentEl.dataset.id;
-                const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
-                if (stateEl) {
-                    stateEl.content = textContentEl.innerHTML;
-                }
-            }
-            return true; // Command was applied
+      // Sync the updated innerHTML back to state
+      const textContentEl = commonAncestor.closest('.text-content');
+      if (textContentEl) {
+        const id = textContentEl.dataset.id;
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+        if (stateEl) {
+          stateEl.content = textContentEl.innerHTML;
         }
+      }
+      return true; // Command was applied
     }
-    return false; // Command was not applied to rich text
+  }
+  return false; // Command was not applied to rich text
 }
 
 fontSelect.addEventListener('change', (e) => {
-    saveState();
-    if (applyRichTextCommand('fontName', e.target.value)) return;
+  saveState();
+  if (applyRichTextCommand('fontName', e.target.value)) return;
 
-    if (state.selectedElementIds.length > 0) {
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id)) el.fontFamily = e.target.value;
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) el.fontFamily = e.target.value;
+    });
+    updateUI();
+  }
 });
 
 fontSizeInput.addEventListener('input', (e) => {
-    if (fontSizeVal) fontSizeVal.textContent = e.target.value;
+  if (fontSizeVal) fontSizeVal.textContent = e.target.value;
 
-    // Instead of execCommand 'fontSize' which only supports 1-7, we apply a span with styling if editing text
-    const sel = window.getSelection();
-    if (sel.rangeCount > 0 && !sel.isCollapsed) {
-        const range = sel.getRangeAt(0);
-        let commonAncestor = range.commonAncestorContainer;
-        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
+  // Instead of execCommand 'fontSize' which only supports 1-7, we apply a span with styling if editing text
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && !sel.isCollapsed) {
+    const range = sel.getRangeAt(0);
+    let commonAncestor = range.commonAncestorContainer;
+    if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
 
-        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
-             document.execCommand('fontSize', false, "7"); // Apply arbitrary large size
-             const textContentEl = commonAncestor.closest('.text-content');
-             // Replace the injected font size 7 with our pixel size
-             const elements = textContentEl.querySelectorAll('font[size="7"]');
-             elements.forEach(fontEl => {
-                 fontEl.removeAttribute('size');
-                 fontEl.style.fontSize = `${e.target.value}px`;
-             });
+    if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+      document.execCommand('fontSize', false, "7"); // Apply arbitrary large size
+      const textContentEl = commonAncestor.closest('.text-content');
+      // Replace the injected font size 7 with our pixel size
+      const elements = textContentEl.querySelectorAll('font[size="7"]');
+      elements.forEach(fontEl => {
+        fontEl.removeAttribute('size');
+        fontEl.style.fontSize = `${e.target.value}px`;
+      });
 
-             const id = textContentEl.dataset.id;
-             const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
-             if (stateEl) {
-                 stateEl.content = textContentEl.innerHTML;
-             }
-             return; // Skip global update
-        }
+      const id = textContentEl.dataset.id;
+      const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+      if (stateEl) {
+        stateEl.content = textContentEl.innerHTML;
+      }
+      return; // Skip global update
     }
+  }
 
-    if (state.selectedElementIds.length > 0) {
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id)) el.fontSize = e.target.value;
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) el.fontSize = e.target.value;
+    });
+    updateUI();
+  }
 });
 
 fontSizeInput.addEventListener('change', (e) => {
-    saveState();
+  saveState();
 });
 
 fontWeightSelect.addEventListener('change', (e) => {
-    saveState();
-    // For rich text, if bold is selected, we run 'bold' command
-    const isBold = e.target.value === 'bold';
+  saveState();
+  // For rich text, if bold is selected, we run 'bold' command
+  const isBold = e.target.value === 'bold';
 
-    const sel = window.getSelection();
-    if (sel.rangeCount > 0 && !sel.isCollapsed) {
-        let commonAncestor = sel.getRangeAt(0).commonAncestorContainer;
-        if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
-        if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
-            // Document.execCommand('bold') toggles it, but we have an explicit normal/bold dropdown
-            // To force it, we wrap it manually or rely on toggle. Here we rely on toggle if it doesn't match state
-            document.execCommand('bold', false, null);
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && !sel.isCollapsed) {
+    let commonAncestor = sel.getRangeAt(0).commonAncestorContainer;
+    if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
+    if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
+      // Document.execCommand('bold') toggles it, but we have an explicit normal/bold dropdown
+      // To force it, we wrap it manually or rely on toggle. Here we rely on toggle if it doesn't match state
+      document.execCommand('bold', false, null);
 
-            const textContentEl = commonAncestor.closest('.text-content');
-            if (textContentEl) {
-                const id = textContentEl.dataset.id;
-                const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
-                if (stateEl) stateEl.content = textContentEl.innerHTML;
-            }
-            return;
-        }
+      const textContentEl = commonAncestor.closest('.text-content');
+      if (textContentEl) {
+        const id = textContentEl.dataset.id;
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+        if (stateEl) stateEl.content = textContentEl.innerHTML;
+      }
+      return;
     }
+  }
 
-    if (state.selectedElementIds.length > 0) {
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id)) el.fontWeight = e.target.value;
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) el.fontWeight = e.target.value;
+    });
+    updateUI();
+  }
 });
 
 gamingColorCheckbox.addEventListener('change', (e) => {
-    if (state.selectedElementIds.length > 0) {
-        saveState();
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id) && el.type === 'text') {
-                el.isGamingColor = e.target.checked;
-            }
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    saveState();
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id) && el.type === 'text') {
+        el.isGamingColor = e.target.checked;
+      }
+    });
+    updateUI();
+  }
 });
 
 frontBtn.addEventListener('click', () => {
-    if (state.selectedElementIds.length > 0) {
-        saveState();
-        let maxZ = 0;
-        state.slides[state.currentSlide].forEach(el => {
-            if (el.zIndex > maxZ) maxZ = el.zIndex;
-        });
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id)) el.zIndex = maxZ + 1;
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    saveState();
+    let maxZ = 0;
+    state.slides[state.currentSlide].forEach(el => {
+      if (el.zIndex > maxZ) maxZ = el.zIndex;
+    });
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) el.zIndex = maxZ + 1;
+    });
+    updateUI();
+  }
 });
 
 backBtn.addEventListener('click', () => {
-    if (state.selectedElementIds.length > 0) {
-        saveState();
-        let minZ = 9999;
-        state.slides[state.currentSlide].forEach(el => {
-            if (el.zIndex < minZ) minZ = el.zIndex;
-        });
-        state.slides[state.currentSlide].forEach(el => {
-            if (state.selectedElementIds.includes(el.id)) el.zIndex = (minZ === 9999 ? 0 : minZ) - 1;
-        });
-        updateUI();
-    }
+  if (state.selectedElementIds.length > 0) {
+    saveState();
+    let minZ = 9999;
+    state.slides[state.currentSlide].forEach(el => {
+      if (el.zIndex < minZ) minZ = el.zIndex;
+    });
+    state.slides[state.currentSlide].forEach(el => {
+      if (state.selectedElementIds.includes(el.id)) el.zIndex = (minZ === 9999 ? 0 : minZ) - 1;
+    });
+    updateUI();
+  }
 });
 
 // Alignment Logic
 function alignSelectedElement(type) {
-    if (state.selectedElementIds.length === 0) return;
+  if (state.selectedElementIds.length === 0) return;
 
-    const containerWidth = slideContainer.clientWidth;
-    const containerHeight = slideContainer.clientHeight;
+  const containerWidth = slideContainer.clientWidth;
+  const containerHeight = slideContainer.clientHeight;
 
-    const selectedElements = state.slides[state.currentSlide].filter(item => state.selectedElementIds.includes(item.id));
+  const selectedElements = state.slides[state.currentSlide].filter(item => state.selectedElementIds.includes(item.id));
 
-    if (selectedElements.length === 1) {
-        // Align relative to slide container
-        const stateEl = selectedElements[0];
-        let elWidth = stateEl.width || 50;
-        let elHeight = stateEl.height || 30;
-        if (stateEl.type === 'text') {
-            const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
-            if (domEl) {
-                const rect = domEl.getBoundingClientRect();
-                elWidth = rect.width;
-                elHeight = rect.height;
-            }
-        }
-
-        switch(type) {
-            case 'left': stateEl.x = 0; break;
-            case 'centerX': stateEl.x = (containerWidth - elWidth) / 2; break;
-            case 'right': stateEl.x = containerWidth - elWidth; break;
-            case 'top': stateEl.y = 0; break;
-            case 'centerY': stateEl.y = (containerHeight - elHeight) / 2; break;
-            case 'bottom': stateEl.y = containerHeight - elHeight; break;
-        }
-    } else {
-        // Align relative to group bounding box
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        // Calculate group bounding box
-        selectedElements.forEach(el => {
-            let elWidth = el.width || 50;
-            let elHeight = el.height || 30;
-            if (el.type === 'text') {
-                const domEl = document.querySelector(`.slide-element[data-id="${el.id}"]`);
-                if (domEl) {
-                    const rect = domEl.getBoundingClientRect();
-                    elWidth = rect.width;
-                    elHeight = rect.height;
-                }
-            }
-            minX = Math.min(minX, el.x);
-            minY = Math.min(minY, el.y);
-            maxX = Math.max(maxX, el.x + elWidth);
-            maxY = Math.max(maxY, el.y + elHeight);
-        });
-
-        const centerX = minX + (maxX - minX) / 2;
-        const centerY = minY + (maxY - minY) / 2;
-
-        selectedElements.forEach(stateEl => {
-            let elWidth = stateEl.width || 50;
-            let elHeight = stateEl.height || 30;
-            if (stateEl.type === 'text') {
-                const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
-                if (domEl) {
-                    elWidth = domEl.getBoundingClientRect().width;
-                    elHeight = domEl.getBoundingClientRect().height;
-                }
-            }
-
-            switch(type) {
-                case 'left': stateEl.x = minX; break;
-                case 'centerX': stateEl.x = centerX - (elWidth / 2); break;
-                case 'right': stateEl.x = maxX - elWidth; break;
-                case 'top': stateEl.y = minY; break;
-                case 'centerY': stateEl.y = centerY - (elHeight / 2); break;
-                case 'bottom': stateEl.y = maxY - elHeight; break;
-            }
-        });
+  if (selectedElements.length === 1) {
+    // Align relative to slide container
+    const stateEl = selectedElements[0];
+    let elWidth = stateEl.width || 50;
+    let elHeight = stateEl.height || 30;
+    if (stateEl.type === 'text') {
+      const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
+      if (domEl) {
+        const rect = domEl.getBoundingClientRect();
+        elWidth = rect.width;
+        elHeight = rect.height;
+      }
     }
 
-    saveState();
-    updateUI();
+    switch (type) {
+      case 'left': stateEl.x = 0; break;
+      case 'centerX': stateEl.x = (containerWidth - elWidth) / 2; break;
+      case 'right': stateEl.x = containerWidth - elWidth; break;
+      case 'top': stateEl.y = 0; break;
+      case 'centerY': stateEl.y = (containerHeight - elHeight) / 2; break;
+      case 'bottom': stateEl.y = containerHeight - elHeight; break;
+    }
+  } else {
+    // Align relative to group bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    // Calculate group bounding box
+    selectedElements.forEach(el => {
+      let elWidth = el.width || 50;
+      let elHeight = el.height || 30;
+      if (el.type === 'text') {
+        const domEl = document.querySelector(`.slide-element[data-id="${el.id}"]`);
+        if (domEl) {
+          const rect = domEl.getBoundingClientRect();
+          elWidth = rect.width;
+          elHeight = rect.height;
+        }
+      }
+      minX = Math.min(minX, el.x);
+      minY = Math.min(minY, el.y);
+      maxX = Math.max(maxX, el.x + elWidth);
+      maxY = Math.max(maxY, el.y + elHeight);
+    });
+
+    const centerX = minX + (maxX - minX) / 2;
+    const centerY = minY + (maxY - minY) / 2;
+
+    selectedElements.forEach(stateEl => {
+      let elWidth = stateEl.width || 50;
+      let elHeight = stateEl.height || 30;
+      if (stateEl.type === 'text') {
+        const domEl = document.querySelector(`.slide-element[data-id="${stateEl.id}"]`);
+        if (domEl) {
+          elWidth = domEl.getBoundingClientRect().width;
+          elHeight = domEl.getBoundingClientRect().height;
+        }
+      }
+
+      switch (type) {
+        case 'left': stateEl.x = minX; break;
+        case 'centerX': stateEl.x = centerX - (elWidth / 2); break;
+        case 'right': stateEl.x = maxX - elWidth; break;
+        case 'top': stateEl.y = minY; break;
+        case 'centerY': stateEl.y = centerY - (elHeight / 2); break;
+        case 'bottom': stateEl.y = maxY - elHeight; break;
+      }
+    });
+  }
+
+  saveState();
+  updateUI();
 }
 
 alignLeftBtn.addEventListener('click', () => alignSelectedElement('left'));
@@ -858,51 +857,51 @@ alignCenterYBtn.addEventListener('click', () => alignSelectedElement('centerY'))
 alignBottomBtn.addEventListener('click', () => alignSelectedElement('bottom'));
 
 function distributeSelectedElements(axis) {
-    if (state.selectedElementIds.length < 3) return;
+  if (state.selectedElementIds.length < 3) return;
 
-    let selectedElements = state.slides[state.currentSlide].filter(item => state.selectedElementIds.includes(item.id));
+  let selectedElements = state.slides[state.currentSlide].filter(item => state.selectedElementIds.includes(item.id));
 
-    // Sort elements by coordinate
-    selectedElements.sort((a, b) => a[axis] - b[axis]);
+  // Sort elements by coordinate
+  selectedElements.sort((a, b) => a[axis] - b[axis]);
 
-    const first = selectedElements[0];
-    const last = selectedElements[selectedElements.length - 1];
+  const first = selectedElements[0];
+  const last = selectedElements[selectedElements.length - 1];
 
-    let firstSpan = (axis === 'x') ? (first.width || 50) : (first.height || 30);
-    let lastSpan = (axis === 'x') ? (last.width || 50) : (last.height || 30);
+  let firstSpan = (axis === 'x') ? (first.width || 50) : (first.height || 30);
+  let lastSpan = (axis === 'x') ? (last.width || 50) : (last.height || 30);
 
-    // Accurate calculation using DOM width/height for text
-    const getSpan = (el) => {
-        let span = (axis === 'x') ? (el.width || 50) : (el.height || 30);
-        if (el.type === 'text') {
-            const domEl = document.querySelector(`.slide-element[data-id="${el.id}"]`);
-            if (domEl) {
-                const rect = domEl.getBoundingClientRect();
-                span = (axis === 'x') ? rect.width : rect.height;
-            }
-        }
-        return span;
-    };
+  // Accurate calculation using DOM width/height for text
+  const getSpan = (el) => {
+    let span = (axis === 'x') ? (el.width || 50) : (el.height || 30);
+    if (el.type === 'text') {
+      const domEl = document.querySelector(`.slide-element[data-id="${el.id}"]`);
+      if (domEl) {
+        const rect = domEl.getBoundingClientRect();
+        span = (axis === 'x') ? rect.width : rect.height;
+      }
+    }
+    return span;
+  };
 
-    firstSpan = getSpan(first);
-    lastSpan = getSpan(last);
+  firstSpan = getSpan(first);
+  lastSpan = getSpan(last);
 
-    const totalDistance = (last[axis] + lastSpan) - first[axis];
+  const totalDistance = (last[axis] + lastSpan) - first[axis];
 
-    let totalSpanOfElements = 0;
-    selectedElements.forEach(el => totalSpanOfElements += getSpan(el));
+  let totalSpanOfElements = 0;
+  selectedElements.forEach(el => totalSpanOfElements += getSpan(el));
 
-    const totalGapSpace = totalDistance - totalSpanOfElements;
-    const gap = totalGapSpace / (selectedElements.length - 1);
+  const totalGapSpace = totalDistance - totalSpanOfElements;
+  const gap = totalGapSpace / (selectedElements.length - 1);
 
-    let currentPos = first[axis];
-    selectedElements.forEach((el, index) => {
-        el[axis] = currentPos;
-        currentPos += getSpan(el) + gap;
-    });
+  let currentPos = first[axis];
+  selectedElements.forEach((el, index) => {
+    el[axis] = currentPos;
+    currentPos += getSpan(el) + gap;
+  });
 
-    saveState();
-    updateUI();
+  saveState();
+  updateUI();
 }
 
 distributeXBtn.addEventListener('click', () => distributeSelectedElements('x'));
@@ -915,12 +914,12 @@ const importJsonInput = document.getElementById('importJsonInput');
 const exportHtmlBtn = document.getElementById('exportHtmlBtn');
 
 exportHtmlBtn.addEventListener('click', () => {
-    exportHtmlBtn.textContent = 'Exporting...';
-    exportHtmlBtn.disabled = true;
+  exportHtmlBtn.textContent = 'Exporting...';
+  exportHtmlBtn.disabled = true;
 
-    try {
-        // Embed the actual source code explicitly as strings to avoid CORS on local machines.
-        const cssContent = `
+  try {
+    // Embed the actual source code explicitly as strings to avoid CORS on local machines.
+    const cssContent = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; color: #00f2ff; }
 #glitchCanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; }
@@ -946,7 +945,7 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Cou
 .slide-element.shape::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px); pointer-events: none; z-index: 1; }
 `;
 
-        const stateJsContent = `
+    const stateJsContent = `
 let state = { currentSlide: 0, selectedElementIds: [], slides: [ [] ] };
 const savedState = window.__INJECTED_STATE__ ? JSON.stringify(window.__INJECTED_STATE__) : localStorage.getItem('cyberpunk_state');
 if (savedState) {
@@ -958,7 +957,7 @@ if (savedState) {
 }
 `;
 
-        const bgJsContent = `
+    const bgJsContent = `
 const canvas = document.getElementById('glitchCanvas');
 const ctx = canvas.getContext('2d');
 function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -1014,7 +1013,7 @@ function drawGlitch() {
 drawGlitch();
 `;
 
-        const viewerJsContent = `
+    const viewerJsContent = `
 const slideContainer = document.getElementById('slideContainer');
 function updateUI() { renderSlide(); }
 function renderSlide() {
@@ -1065,14 +1064,17 @@ document.addEventListener('dblclick', () => {
 document.addEventListener('DOMContentLoaded', updateUI);
 `;
 
-        const stateJson = JSON.stringify(state);
+    const stateJson = JSON.stringify(state);
 
-        const htmlTemplate = `<!DOCTYPE html>
+    const htmlTemplate = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyberpunk Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   <style>
 ${cssContent}
   /* Override for viewer mode: no borders, hide overflow */
@@ -1100,65 +1102,65 @@ ${viewerJsContent}
 </body>
 </html>`;
 
-        const blob = new Blob([htmlTemplate], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'presentation_export.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (e) {
-        console.error("Failed to export HTML", e);
-        alert("Failed to export HTML.");
-    } finally {
-        exportHtmlBtn.textContent = 'Export Single HTML';
-        exportHtmlBtn.disabled = false;
-    }
+    const blob = new Blob([htmlTemplate], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'presentation_export.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error("Failed to export HTML", e);
+    alert("Failed to export HTML.");
+  } finally {
+    exportHtmlBtn.textContent = 'Export Single HTML';
+    exportHtmlBtn.disabled = false;
+  }
 });
 
 exportJsonBtn.addEventListener('click', () => {
-    exportStateToJson();
+  exportStateToJson();
 });
 
 importJsonBtn.addEventListener('click', () => {
-    importJsonInput.click();
+  importJsonInput.click();
 });
 
 importJsonInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        importStateFromJson(file);
-    }
-    e.target.value = ''; // reset
+  const file = e.target.files[0];
+  if (file) {
+    importStateFromJson(file);
+  }
+  e.target.value = ''; // reset
 });
 
 document.addEventListener('mouseup', (e) => {
   if (dragTarget || resizeTarget) {
     if (dragTarget && groupDragInitialPositions.length > 0) {
-        groupDragInitialPositions.forEach(pos => {
-            const stateEl = state.slides[state.currentSlide].find(item => item.id === pos.id);
-            if (stateEl) {
-                stateEl.x = parseFloat(pos.dom.style.left);
-                stateEl.y = parseFloat(pos.dom.style.top);
-            }
-        });
-        saveState();
-    } else if (resizeTarget) {
-        const id = resizeTarget.dataset.id;
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+      groupDragInitialPositions.forEach(pos => {
+        const stateEl = state.slides[state.currentSlide].find(item => item.id === pos.id);
         if (stateEl) {
-          stateEl.x = parseFloat(resizeTarget.style.left);
-          stateEl.y = parseFloat(resizeTarget.style.top);
-
-          // Update dimensions explicitly for all element types
-          const computedStyle = getComputedStyle(resizeTarget);
-          stateEl.width = parseFloat(computedStyle.width);
-          stateEl.height = parseFloat(computedStyle.height);
-
-          saveState(); // Ensure state persists after movement/resize
+          stateEl.x = parseFloat(pos.dom.style.left);
+          stateEl.y = parseFloat(pos.dom.style.top);
         }
+      });
+      saveState();
+    } else if (resizeTarget) {
+      const id = resizeTarget.dataset.id;
+      const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
+      if (stateEl) {
+        stateEl.x = parseFloat(resizeTarget.style.left);
+        stateEl.y = parseFloat(resizeTarget.style.top);
+
+        // Update dimensions explicitly for all element types
+        const computedStyle = getComputedStyle(resizeTarget);
+        stateEl.width = parseFloat(computedStyle.width);
+        stateEl.height = parseFloat(computedStyle.height);
+
+        saveState(); // Ensure state persists after movement/resize
+      }
     }
 
     dragTarget = null;
