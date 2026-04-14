@@ -1,10 +1,10 @@
 const slideContainer = document.getElementById('slideContainer');
 let currentScale = 1;
 function resizeContainer() {
-    const margin = 40;
-    const scaleX = (window.innerWidth - margin) / 1280;
-    const scaleY = (window.innerHeight - margin) / 720;
-    currentScale = Math.min(scaleX, scaleY, 1);
+    const margin = 0;
+    const scaleX = window.innerWidth / 1280;
+    const scaleY = window.innerHeight / 720;
+    currentScale = Math.min(scaleX, scaleY);
     slideContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
 }
 window.addEventListener('resize', resizeContainer);
@@ -15,56 +15,56 @@ function updateUI() {
 }
 
 function renderSlide() {
-  slideContainer.innerHTML = '';
-  const currentElements = state.slides[state.currentSlide];
+    slideContainer.innerHTML = '';
+    const currentElements = state.slides[state.currentSlide];
 
-  currentElements.forEach(el => {
-    const div = document.createElement('div');
-    div.classList.add('slide-element', el.type);
-    div.style.left = `${el.x}px`;
-    div.style.top = `${el.y}px`;
-    div.style.zIndex = el.zIndex || 1;
+    currentElements.forEach(el => {
+        const div = document.createElement('div');
+        div.classList.add('slide-element', el.type);
+        div.style.left = `${el.x}px`;
+        div.style.top = `${el.y}px`;
+        div.style.zIndex = el.zIndex || 1;
 
-    if (el.type === 'text') {
-      const textInner = document.createElement('div');
-      textInner.className = 'text-content';
-      textInner.innerHTML = el.content;
+        if (el.type === 'text') {
+            const textInner = document.createElement('div');
+            textInner.className = 'text-content';
+            textInner.innerHTML = el.content;
 
-      div.classList.add('glitch-text'); // Add glitch effect
-      if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
+            div.classList.add('glitch-text'); // Add glitch effect
+            if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
 
-      if (el.color) div.style.color = el.color;
-      if (el.fontFamily) div.style.fontFamily = el.fontFamily;
-      if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
-      if (el.fontWeight) div.style.fontWeight = el.fontWeight;
-      if (el.width) div.style.width = `${el.width}px`;
-      if (el.height) div.style.height = `auto`;
+            if (el.color) div.style.color = el.color;
+            if (el.fontFamily) div.style.fontFamily = el.fontFamily;
+            if (el.fontSize) div.style.fontSize = `${el.fontSize}px`;
+            if (el.fontWeight) div.style.fontWeight = el.fontWeight;
+            if (el.width) div.style.width = `${el.width}px`;
+            if (el.height) div.style.height = `auto`;
 
-      div.appendChild(textInner);
-    } else if (el.type === 'shape') {
-      div.style.width = `${el.width}px`;
-      div.style.height = `${el.height}px`;
-      div.style.borderRadius = el.borderRadius || '0';
-      if (el.backgroundColor) div.style.backgroundColor = el.backgroundColor;
-      if (el.borderColor) div.style.border = `2px solid ${el.borderColor}`;
-    } else if (el.type === 'image') {
-      div.style.width = `${el.width}px`;
-      div.style.height = `${el.height}px`;
-      div.style.overflow = "hidden"; // Clip the image within the container
-      const img = document.createElement('img');
-      img.src = el.src;
-      img.style.objectFit = "cover";
-      img.style.width = "100%";
-      img.style.height = "100%";
+            div.appendChild(textInner);
+        } else if (el.type === 'shape') {
+            div.style.width = `${el.width}px`;
+            div.style.height = `${el.height}px`;
+            div.style.borderRadius = el.borderRadius || '0';
+            if (el.backgroundColor) div.style.backgroundColor = el.backgroundColor;
+            if (el.borderColor) div.style.border = `2px solid ${el.borderColor}`;
+        } else if (el.type === 'image') {
+            div.style.width = `${el.width}px`;
+            div.style.height = `${el.height}px`;
+            div.style.overflow = "hidden"; // Clip the image within the container
+            const img = document.createElement('img');
+            img.src = el.src;
+            img.style.objectFit = "cover";
+            img.style.width = "100%";
+            img.style.height = "100%";
 
-      const cropX = el.cropX !== undefined ? el.cropX : 50;
-      const cropY = el.cropY !== undefined ? el.cropY : 50;
-      img.style.objectPosition = `${cropX}% ${cropY}%`;
-      div.appendChild(img);
-    }
+            const cropX = el.cropX !== undefined ? el.cropX : 50;
+            const cropY = el.cropY !== undefined ? el.cropY : 50;
+            img.style.objectPosition = `${cropX}% ${cropY}%`;
+            div.appendChild(img);
+        }
 
-    slideContainer.appendChild(div);
-  });
+        slideContainer.appendChild(div);
+    });
 }
 
 document.addEventListener('keydown', (e) => {
@@ -98,6 +98,3 @@ document.addEventListener('dblclick', () => {
         document.exitFullscreen();
     }
 });
-
-// Initial render
-document.addEventListener('DOMContentLoaded', updateUI);

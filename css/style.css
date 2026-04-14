@@ -26,21 +26,21 @@ body {
   /* Bottom-most layer */
 }
 
-/* Agent 2 Slide Container */
 .slide-container {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform-origin: center center;
-  transform: translate(-50%, -50%) scale(1);
+  /* 基準となる解像度を固定（16:9） */
   width: 1280px;
   height: 720px;
+  /* 拡大縮小の基準点を中央にする */
+  transform-origin: center center;
+  /* 初期位置。JSでscaleが追加される */
+  transform: translate(-50%, -50%) scale(1);
+
   background: rgba(0, 20, 20, 0.4);
-  /* Semi-transparent */
   backdrop-filter: blur(10px);
-  /* Blur effect */
   border: 1px solid #00f2ff;
-  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
   overflow: hidden;
   z-index: 1;
 }
@@ -220,13 +220,13 @@ body {
 
   2% {
     opacity: 0.8;
-    transform: translate(-2px, 1px);
+    transform: translate(-1.5px, 1px);
     background-color: rgba(0, 242, 255, 0.4);
   }
 
   4% {
     opacity: 1;
-    transform: translate(2px, -1px);
+    transform: translate(1.5px, -1px);
   }
 
   6% {
@@ -242,12 +242,12 @@ body {
 
   46% {
     opacity: 0.7;
-    transform: translate(1px, 2px);
+    transform: translate(1px, 1.5px);
   }
 
   48% {
     opacity: 1;
-    transform: translate(-1px, -2px);
+    transform: translate(-1px, -1.5px);
   }
 
   50% {
