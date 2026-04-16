@@ -1,12 +1,12 @@
 // --- Agent 2: Shared State Management ---
 let state = {
-  currentSlide: 0,
-  selectedElementIds: [],
-  slides: [
-    [
-      { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200, zIndex: 1 }
+    currentSlide: 0,
+    selectedElementIds: [],
+    slides: [
+        [
+            { id: Date.now().toString(), type: 'text', content: 'CYBERPUNK_SLIDES_V1.0', x: 250, y: 200, zIndex: 1 }
+        ]
     ]
-  ]
 };
 
 // Strict LocalStorage Cleanup: only keep 'cyberpunk_state'
@@ -37,34 +37,55 @@ if (savedState) {
 let historyStack = [];
 
 function saveToLocalStorage() {
-    localStorage.setItem('cyberpunk_state', JSON.stringify(state));
+    try {
+        localStorage.setItem('cyberpunk_state', JSON.stringify(state));
+    } catch (e) {
+        // 5MBの限界を突破した時のアラート！
+        console.error("LocalStorage quota exceeded!", e);
+        alert("⚠️ ブラウザの自動保存容量（約5MB）がいっぱいになっちゃった！\nこれ以上は自動保存されないから、必ず「Save as File」ボタンでこまめにパソコンに保存してね！");
+    }
 }
 
 function saveState() {
-  const stateStr = JSON.stringify(state);
-  // Only push to history if it actually changed from the last recorded state
-  if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== stateStr) {
-      historyStack.push(stateStr);
-      if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
-  }
-  saveToLocalStorage(); // Auto-save on every state change
+    const stateStr = JSON.stringify(state);
+    // Only push to history if it actually changed from the last recorded state
+    if (historyStack.length === 0 || historyStack[historyStack.length - 1] !== stateStr) {
+        historyStack.push(stateStr);
+        if (historyStack.length > 50) historyStack.shift(); // Limit history to 50
+    }
+    saveToLocalStorage(); // Auto-save on every state change
 }
 
 function undo() {
-  if (historyStack.length > 0) {
-    const prevState = historyStack.pop();
-    state = JSON.parse(prevState);
-    // Explicitly reset selection during undo to avoid ghost handles
-    state.selectedElementIds = [];
-    saveToLocalStorage(); // Ensure un-done state is persisted
-    if (typeof updateUI === 'function') {
-        updateUI();
+    if (historyStack.length > 0) {
+        const prevState = historyStack.pop();
+        state = JSON.parse(prevState);
+        // Explicitly reset selection during undo to avoid ghost handles
+        state.selectedElementIds = [];
+        saveToLocalStorage(); // Ensure un-done state is persisted
+        if (typeof updateUI === 'function') {
+            updateUI();
+        }
     }
-  }
 }
 
-function exportStateToJson() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+async function exportStateToJson() { // 👈 async を追加！
+    const exportState = JSON.parse(JSON.stringify(state));
+    for (let i = 0; i < exportState.slides.length; i++) {
+        for (let j = 0; j < exportState.slides[i].length; j++) {
+            const el = exportState.slides[i][j];
+            if (el.type === 'image' && el.src.startsWith('blob:')) {
+                const res = await fetch(el.src);
+                const blob = await res.blob();
+                el.src = await new Promise(r => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => r(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            }
+        }
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportState));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute("download", "cyberpunk_presentation.json");
@@ -93,7 +114,7 @@ function importStateFromJson(file) {
                         updateUI();
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Error parsing JSON file", e);
                 alert("Invalid JSON file.");
             }

@@ -19,6 +19,13 @@ function renderSlide() {
     const currentElements = state.slides[state.currentSlide];
 
     currentElements.forEach(el => {
+        // 1280x720の画面に対して、上下左右に500pxの余裕を持たせた範囲だけを描画する
+        const elWidth = el.width || 200;
+        const elHeight = el.height || 200;
+        const isOffScreen = (el.x + elWidth < -500) || (el.x > 1780) || (el.y + elHeight < -500) || (el.y > 1220);
+
+        // 画面外に飛んでいった要素は、HTML（DOM）を作らずにスキップ！これで爆速になる！
+        if (isOffScreen) return;
         const div = document.createElement('div');
         div.classList.add('slide-element', el.type);
         div.style.left = `${el.x}px`;

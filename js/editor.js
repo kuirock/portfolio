@@ -81,6 +81,59 @@ function updateUI() {
   }
 }
 
+// スナップガイドの要素を管理
+let guideLineX, guideLineY;
+
+function drawSnapGuides(x, y) {
+  // スナップガイドの要素を管理
+  let guideLineX = null;
+  let guideLineY = null;
+
+  function drawSnapGuides(x, y) {
+    // まだ作られてなかったら作る
+    if (!guideLineX) {
+      guideLineX = document.createElement('div');
+      guideLineX.className = 'snap-guide snap-guide-x';
+      guideLineY = document.createElement('div');
+      guideLineY.className = 'snap-guide snap-guide-y';
+    }
+
+    // ▼▼ ここを追加！ ▼▼
+    // updateUI() で画面がリセットされて DOM（HTML）から消えちゃってたら、復活させる！
+    if (!guideLineX.parentElement) {
+      slideContainer.appendChild(guideLineX);
+    }
+    if (!guideLineY.parentElement) {
+      slideContainer.appendChild(guideLineY);
+    }
+    // ▲▲ ここまで ▲▲
+
+    if (x !== null) {
+      guideLineX.style.display = 'block';
+      guideLineX.style.left = `${x}px`;
+    } else {
+      guideLineX.style.display = 'none';
+    }
+
+    if (y !== null) {
+      guideLineY.style.display = 'block';
+      guideLineY.style.top = `${y}px`;
+    } else {
+      guideLineY.style.display = 'none';
+    }
+  }
+
+  function clearSnapGuides() {
+    if (guideLineX) guideLineX.style.display = 'none';
+    if (guideLineY) guideLineY.style.display = 'none';
+  }
+}
+
+function clearSnapGuides() {
+  if (guideLineX) guideLineX.style.display = 'none';
+  if (guideLineY) guideLineY.style.display = 'none';
+}
+
 prevBtn.addEventListener('click', () => {
   if (state.currentSlide > 0) {
     state.currentSlide--;
@@ -144,12 +197,67 @@ moveSlideRightBtn.addEventListener('click', () => {
 
 undoBtn.addEventListener('click', undo);
 
+// --- プレゼンモードの魔法 ---
+let isPresentationMode = false;
+
 startPresBtn.addEventListener('click', () => {
-  saveToLocalStorage(); // Ensure latest is saved
-  window.open('viewer.html', '_blank');
+  isPresentationMode = true;
+  state.selectedElementIds = []; // 選択中の枠線を消す
+  updateUI();
+
+  // エディタのUI（パネル）を隠す
+  document.getElementById('controlPanel').style.display = 'none';
+  document.getElementById('propertyPanel').style.display = 'none';
+
+  // スライド枠を透明にして、背景と一体化させる（viewerと同じ見た目！）
+  slideContainer.style.border = 'none';
+  slideContainer.style.background = 'transparent';
+  slideContainer.style.backdropFilter = 'none';
+  slideContainer.style.boxShadow = 'none';
+  document.body.style.cursor = 'none'; // サイバー感を出すためカーソルを消す
+
+  // 今のタブのまま、ブラウザを全画面表示（フルスクリーン）にする！
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen();
+  }
+});
+
+// ESCキーを押して全画面が終わった時、エディタに元通り戻す処理
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    isPresentationMode = false;
+
+    // エディタのUIを復活！
+    document.getElementById('controlPanel').style.display = 'flex';
+    slideContainer.style.border = '1px solid #00f2ff';
+    slideContainer.style.background = 'rgba(0, 20, 20, 0.4)';
+    slideContainer.style.backdropFilter = 'blur(10px)';
+    slideContainer.style.boxShadow = '0 0 15px rgba(0, 242, 255, 0.3)';
+    document.body.style.cursor = 'default';
+
+    updateUI();
+  }
+});
+
+// 画面クリックでスライドを進める処理（プレゼン中だけ有効）
+document.addEventListener('click', (e) => {
+  if (isPresentationMode) {
+    if (state.currentSlide < state.slides.length - 1) {
+      state.currentSlide++;
+      updateUI();
+    }
+  }
 });
 
 document.addEventListener('keydown', (e) => {
+  if (isPresentationMode) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      if (state.currentSlide < state.slides.length - 1) { state.currentSlide++; updateUI(); }
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      if (state.currentSlide > 0) { state.currentSlide--; updateUI(); }
+    }
+    return; // プレゼン中はこれ以下の処理（削除やコピペ）を無視する！
+  }
   // 1. 文字入力中ならカスタムコピペや削除を無視（ブラウザ標準の文字コピペに任せる）
   if (document.activeElement && document.activeElement.contentEditable === "true") {
     return;
@@ -178,44 +286,48 @@ document.addEventListener('keydown', (e) => {
   // 2. コピー処理 (Ctrl+C または Cmd+C)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
     if (state.selectedElementIds.length > 0) {
-      // 選択中の要素を抽出
       const selectedElements = state.slides[state.currentSlide].filter(el => state.selectedElementIds.includes(el.id));
-      // 完全なディープコピーでクリップボードに保存
-      clipboard = JSON.parse(JSON.stringify(selectedElements));
+      // ▼ ここに「コピーした時のスライド番号」をセット！
+      clipboard = {
+        elements: JSON.parse(JSON.stringify(selectedElements)),
+        sourceSlide: state.currentSlide
+      };
     }
   }
 
   // 3. ペースト処理 (Ctrl+V または Cmd+V)
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-    if (clipboard.length > 0) {
-      saveState(); // UNDOできるように現在の状態を保存
+    if (clipboard && clipboard.elements && clipboard.elements.length > 0) {
+      saveState();
+
+      // コピー元と同じスライドなら 20px ずらす、違うスライドなら 0px（そのまま）
+      const offset = (clipboard.sourceSlide === state.currentSlide) ? 20 : 0;
 
       const newIds = [];
-      clipboard.forEach(copiedEl => {
-        // ペースト用にもう一度ディープコピー
+      clipboard.elements.forEach(copiedEl => {
         const newEl = JSON.parse(JSON.stringify(copiedEl));
-        // 絶対に重複しない新しいIDを生成
         newEl.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-        // 位置を少しずらす
-        newEl.x += 20;
-        newEl.y += 20;
+
+        // ▼ ここで判定したオフセットを足す！
+        newEl.x += offset;
+        newEl.y += offset;
 
         state.slides[state.currentSlide].push(newEl);
         newIds.push(newEl.id);
       });
 
-      // ペーストした要素だけを即座に選択状態にする
       state.selectedElementIds = newIds;
 
-      // Also update clipboard so next paste offsets again
-      clipboard = JSON.parse(JSON.stringify(clipboard));
-      clipboard.forEach(el => {
-        el.x += 20;
-        el.y += 20;
-      });
+      // 次にまた同じページで連打した時のために、コピー元データもずらしておく
+      if (offset > 0) {
+        clipboard.elements.forEach(el => {
+          el.x += offset;
+          el.y += offset;
+        });
+      }
 
       updateUI();
-      saveToLocalStorage(); // オートセーブ
+      saveToLocalStorage();
     }
   }
 });
@@ -267,46 +379,52 @@ imageInput.addEventListener('change', (e) => {
       img.onload = () => {
         let targetWidth = img.width;
         let targetHeight = img.height;
-        const MAX_SIZE = 1024;
+
+        // ▼▼ プロ仕様：上限を 2048px に引き上げ！ ▼▼
+        const MAX_SIZE = 2048;
 
         if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
-          if (targetWidth > targetHeight) {
-            targetHeight *= MAX_SIZE / targetWidth;
-            targetWidth = MAX_SIZE;
-          } else {
-            targetWidth *= MAX_SIZE / targetHeight;
-            targetHeight = MAX_SIZE;
-          }
+          const ratio = Math.min(MAX_SIZE / targetWidth, MAX_SIZE / targetHeight);
+          targetWidth *= ratio;
+          targetHeight *= ratio;
         }
 
         const canvas = document.createElement('canvas');
         canvas.width = targetWidth;
         canvas.height = targetHeight;
         const ctx = canvas.getContext('2d');
+
+        // 描画品質を上げる設定
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-        const compressedBase64 = canvas.toDataURL('image/webp', 0.7);
+        // ▼▼ 魔法：toDataURL（同期/重い）ではなく toBlob（非同期/軽い）を使う！ ▼▼
+        canvas.toBlob((blob) => {
+          // 幻のリンク（Blob URL）を生成。これで LocalStorage は 0 バイト！
+          const blobUrl = URL.createObjectURL(blob);
 
-        saveState();
-        const newElement = {
-          id: Date.now().toString(),
-          type: 'image',
-          src: compressedBase64,
-          width: 200,
-          height: 200,
-          x: 100,
-          y: 100,
-          cropMode: false
-        };
-        state.slides[state.currentSlide].push(newElement);
-        state.selectedElementIds = [newElement.id];
-        updateUI();
+          saveState();
+          const newElement = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            type: 'image',
+            src: blobUrl, // 👈 高画質だけど軽い参照リンク
+            width: 400, // 最初から少し大きめに配置
+            height: 400 * (targetHeight / targetWidth),
+            x: 100,
+            y: 100,
+            cropMode: false
+          };
+          state.slides[state.currentSlide].push(newElement);
+          state.selectedElementIds = [newElement.id];
+          updateUI();
+        }, 'image/webp', 0.95); // 画質も 95% まで贅沢に上げる！
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   }
-  e.target.value = ''; // reset
+  e.target.value = '';
 });
 // ==========================================
 // 魔法の画像一括ダイエットボタン！
@@ -322,14 +440,14 @@ if (compressImagesBtn) {
 
     saveState(); // 万が一のためにUNDOできるように保存！
 
-    // Base64画像を再圧縮する関数（WebP / 画質50% / 最大800px）
+    // Base64画像を再圧縮する関数（WebP / 画質50% / 最大1024px）
     const compressImageBase64 = (base64Str) => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
           let targetWidth = img.width;
           let targetHeight = img.height;
-          const MAX_SIZE = 800; // 最大800pxに制限！
+          const MAX_SIZE = 1024; // 最大1024pxに制限！
 
           if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
             if (targetWidth > targetHeight) {
@@ -347,8 +465,10 @@ if (compressImagesBtn) {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-          // ここで限界突破の WebP 0.5 に圧縮！
-          resolve(canvas.toDataURL('image/webp', 0.5));
+          // WebP 0.8 に圧縮！
+          canvas.toBlob((blob) => {
+            resolve(URL.createObjectURL(blob)); // 👈 ここも幻のリンク！
+          }, 'image/webp', 0.8);
         };
         img.src = base64Str;
       });
@@ -384,6 +504,13 @@ function renderSlide() {
   const currentElements = state.slides[state.currentSlide];
 
   currentElements.forEach(el => {
+    // 1280x720の画面に対して、上下左右に500pxの余裕を持たせた範囲だけを描画する
+    const elWidth = el.width || 200;
+    const elHeight = el.height || 200;
+    const isOffScreen = (el.x + elWidth < -500) || (el.x > 1780) || (el.y + elHeight < -500) || (el.y > 1220);
+
+    // 画面外に飛んでいった要素は、HTML（DOM）を作らずにスキップ！これで爆速になる！
+    if (isOffScreen) return;
     const div = document.createElement('div');
     div.classList.add('slide-element', el.type);
     div.dataset.id = el.id;
@@ -438,6 +565,7 @@ function renderSlide() {
       div.style.overflow = "hidden"; // Clip the image within the container
       const img = document.createElement('img');
       img.src = el.src;
+      img.loading = "lazy";
       img.style.objectFit = "cover";
       img.style.width = "100%";
       img.style.height = "100%";
@@ -471,6 +599,7 @@ function renderSlide() {
 
 // Double click actions
 slideContainer.addEventListener('dblclick', (e) => {
+  if (isPresentationMode) return; // プレゼン中は編集禁止！
   if (e.target.classList.contains('shape')) {
     // Toggle border radius of shapes
     const id = e.target.dataset.id;
@@ -539,6 +668,7 @@ document.addEventListener('mouseup', () => {
 });
 
 slideContainer.addEventListener('mousedown', (e) => {
+  if (isPresentationMode) return; // プレゼン中はドラッグ禁止！
   // Fix text selection drag conflict: prevent drag initialization if clicking inside an actively editable text element
   if (e.target.isContentEditable || e.target.closest('[contenteditable="true"]')) {
     return;
@@ -610,31 +740,74 @@ document.addEventListener('mousemove', (e) => {
     const stateEl = state.slides[state.currentSlide].find(item => item.id === dragTarget.dataset.id);
 
     if (stateEl && stateEl.cropMode) {
-      // Adjust the object-position (cropX, cropY) instead of moving container
-      const dx = e.movementX * -0.5; // Sensitivity multiplier
+      // ...(元のcropModeの処理はそのまま残す)
+      const dx = e.movementX * -0.5;
       const dy = e.movementY * -0.5;
-
-      let newCropX = (stateEl.cropX || 50) + dx;
-      let newCropY = (stateEl.cropY || 50) + dy;
-
-      // Clamp between 0 and 100%
-      newCropX = Math.max(0, Math.min(100, newCropX));
-      newCropY = Math.max(0, Math.min(100, newCropY));
-
+      let newCropX = Math.max(0, Math.min(100, (stateEl.cropX || 50) + dx));
+      let newCropY = Math.max(0, Math.min(100, (stateEl.cropY || 50) + dy));
       stateEl.cropX = newCropX;
       stateEl.cropY = newCropY;
-
       const img = dragTarget.querySelector('img');
       if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
     } else {
-      const dx = (e.clientX - startMouse.x) / currentScale;
-      const dy = (e.clientY - startMouse.y) / currentScale;
+      let dx = (e.clientX - startMouse.x) / currentScale;
+      let dy = (e.clientY - startMouse.y) / currentScale;
 
-      if (groupDragInitialPositions.length > 0) {
+      if (groupDragInitialPositions.length === 1) { // 単一要素ドラッグ時のみスナップを有効化
+        const SNAP_THRESHOLD = 7; // 吸い付く強さ（ピクセル）
+        const pos = groupDragInitialPositions[0];
+
+        let newX = pos.initialX + dx;
+        let newY = pos.initialY + dy;
+        const elWidth = dragTarget.offsetWidth;
+        const elHeight = dragTarget.offsetHeight;
+
+        // ▼▼ 1. スナップ候補の座標を集める ▼▼
+        const targetXs = [0, 1280 / 2, 1280]; // 画面の左、中央、右
+        const targetYs = [0, 720 / 2, 720];   // 画面の上、中央、下
+
+        // 他の要素の座標も候補に追加
+        state.slides[state.currentSlide].forEach(otherEl => {
+          if (otherEl.id !== pos.id) {
+            const oW = otherEl.width || 100;
+            const oH = otherEl.height || 100;
+            targetXs.push(otherEl.x, otherEl.x + oW / 2, otherEl.x + oW);
+            targetYs.push(otherEl.y, otherEl.y + oH / 2, otherEl.y + oH);
+          }
+        });
+
+        // ▼▼ 2. 吸い付き（スナップ）判定 ▼▼
+        let snappedX = null;
+        let snappedY = null;
+
+        // X軸のスナップ（左端、中央、右端を判定）
+        for (let tx of targetXs) {
+          if (Math.abs(newX - tx) < SNAP_THRESHOLD) { newX = tx; snappedX = tx; break; }
+          if (Math.abs((newX + elWidth / 2) - tx) < SNAP_THRESHOLD) { newX = tx - elWidth / 2; snappedX = tx; break; }
+          if (Math.abs((newX + elWidth) - tx) < SNAP_THRESHOLD) { newX = tx - elWidth; snappedX = tx; break; }
+        }
+
+        // Y軸のスナップ
+        for (let ty of targetYs) {
+          if (Math.abs(newY - ty) < SNAP_THRESHOLD) { newY = ty; snappedY = ty; break; }
+          if (Math.abs((newY + elHeight / 2) - ty) < SNAP_THRESHOLD) { newY = ty - elHeight / 2; snappedY = ty; break; }
+          if (Math.abs((newY + elHeight) - ty) < SNAP_THRESHOLD) { newY = ty - elHeight; snappedY = ty; break; }
+        }
+
+        // ▼▼ 3. ガイド線の描画 ▼▼
+        drawSnapGuides(snappedX, snappedY);
+
+        // スナップした結果を実際に適用
+        pos.dom.style.left = `${newX}px`;
+        pos.dom.style.top = `${newY}px`;
+
+      } else if (groupDragInitialPositions.length > 1) {
+        // 複数選択時はスナップさせずそのまま移動
         groupDragInitialPositions.forEach(pos => {
           pos.dom.style.left = `${pos.initialX + dx}px`;
           pos.dom.style.top = `${pos.initialY + dy}px`;
         });
+        clearSnapGuides();
       }
     }
   } else if (resizeTarget) {
@@ -646,6 +819,7 @@ document.addEventListener('mousemove', (e) => {
     let newLeft = startRect.left;
     let newTop = startRect.top;
 
+    // まず普通にマウスの移動量からサイズと位置を計算
     if (resizeCorner.includes('e')) newWidth = startRect.width + dx;
     if (resizeCorner.includes('s')) newHeight = startRect.height + dy;
     if (resizeCorner.includes('w')) {
@@ -657,9 +831,72 @@ document.addEventListener('mousemove', (e) => {
       newTop = startRect.top + dy;
     }
 
+    // ▼▼ ここからリサイズ用のスナップ（吸い付き）ロジック！ ▼▼
+    const SNAP_THRESHOLD = 15;
+    const targetXs = [0, 1280 / 2, 1280];
+    const targetYs = [0, 720 / 2, 720];
+
+    // 他の要素の座標を集める
+    state.slides[state.currentSlide].forEach(otherEl => {
+      if (otherEl.id !== resizeTarget.dataset.id) {
+        const oW = otherEl.width || 100;
+        const oH = otherEl.height || 100;
+        targetXs.push(otherEl.x, otherEl.x + oW / 2, otherEl.x + oW);
+        targetYs.push(otherEl.y, otherEl.y + oH / 2, otherEl.y + oH);
+      }
+    });
+
+    let snappedX = null;
+    let snappedY = null;
+
+    // 【X軸のスナップ】右辺（e）を引っ張っているか、左辺（w）を引っ張っているかで判定を変える！
+    if (resizeCorner.includes('e')) {
+      let currentRight = newLeft + newWidth;
+      for (let tx of targetXs) {
+        if (Math.abs(currentRight - tx) < SNAP_THRESHOLD) {
+          newWidth = tx - newLeft; // 右辺が吸い付いた分、幅を調整
+          snappedX = tx;
+          break;
+        }
+      }
+    } else if (resizeCorner.includes('w')) {
+      for (let tx of targetXs) {
+        if (Math.abs(newLeft - tx) < SNAP_THRESHOLD) {
+          newWidth = (startRect.left + startRect.width) - tx; // 右辺は固定で、左辺が吸い付いた分幅を調整
+          newLeft = tx;
+          snappedX = tx;
+          break;
+        }
+      }
+    }
+
+    // 【Y軸のスナップ】下辺（s）を引っ張っているか、上辺（n）を引っ張っているかで判定を変える！
+    if (resizeCorner.includes('s')) {
+      let currentBottom = newTop + newHeight;
+      for (let ty of targetYs) {
+        if (Math.abs(currentBottom - ty) < SNAP_THRESHOLD) {
+          newHeight = ty - newTop; // 下辺が吸い付いた分、高さを調整
+          snappedY = ty;
+          break;
+        }
+      }
+    } else if (resizeCorner.includes('n')) {
+      for (let ty of targetYs) {
+        if (Math.abs(newTop - ty) < SNAP_THRESHOLD) {
+          newHeight = (startRect.top + startRect.height) - ty; // 下辺は固定で、上辺が吸い付いた分高さを調整
+          newTop = ty;
+          snappedY = ty;
+          break;
+        }
+      }
+    }
+
+    // ガイド線を引く！
+    drawSnapGuides(snappedX, snappedY);
+
     // Enforce minimum size
-    const minWidth = resizeTarget.classList.contains('text') ? 50 : 20;
-    const minHeight = resizeTarget.classList.contains('text') ? 30 : 20;
+    const minWidth = resizeTarget.classList.contains('text') ? 50 : 5;
+    const minHeight = resizeTarget.classList.contains('text') ? 30 : 5;
 
     if (newWidth > minWidth && newHeight > minHeight) {
       resizeTarget.style.width = `${newWidth}px`;
@@ -1023,12 +1260,29 @@ const importJsonBtn = document.getElementById('importJsonBtn');
 const importJsonInput = document.getElementById('importJsonInput');
 const exportHtmlBtn = document.getElementById('exportHtmlBtn');
 
-exportHtmlBtn.addEventListener('click', () => {
+exportHtmlBtn.addEventListener('click', async () => {
   exportHtmlBtn.textContent = 'Exporting...';
   exportHtmlBtn.disabled = true;
 
   try {
-    // Embed the actual source code explicitly as strings to avoid CORS on local machines.
+    // ▼▼ 魔法：書き出す直前に Base64 に焼き直す！ ▼▼
+    const exportState = JSON.parse(JSON.stringify(state)); // コピーを作る
+    for (let i = 0; i < exportState.slides.length; i++) {
+      for (let j = 0; j < exportState.slides[i].length; j++) {
+        const el = exportState.slides[i][j];
+        if (el.type === 'image' && el.src.startsWith('blob:')) {
+          // 幻のリンクからデータを吸い出してBase64に変換！
+          const res = await fetch(el.src);
+          const blob = await res.blob();
+          el.src = await new Promise(r => {
+            const reader = new FileReader();
+            reader.onloadend = () => r(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    }
+    const stateJson = JSON.stringify(exportState); // 焼き直したデータを文字にする！
     const cssContent = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; color: #00f2ff; }
@@ -1141,6 +1395,10 @@ function renderSlide() {
   slideContainer.innerHTML = '';
   const currentElements = state.slides[state.currentSlide];
   currentElements.forEach(el => {
+    const elWidth = el.width || 200;
+    const elHeight = el.height || 200;
+    const isOffScreen = (el.x + elWidth < -500) || (el.x > 1780) || (el.y + elHeight < -500) || (el.y > 1220);
+    if (isOffScreen) return;
     const div = document.createElement('div');
     div.classList.add('slide-element', el.type);
     div.style.left = \`\${el.x}px\`; div.style.top = \`\${el.y}px\`; div.style.zIndex = el.zIndex || 1;
@@ -1185,7 +1443,7 @@ document.addEventListener('dblclick', () => {
 document.addEventListener('DOMContentLoaded', updateUI);
 `;
 
-    const stateJson = JSON.stringify(state);
+    const originalStateJson = JSON.stringify(state);
 
     const htmlTemplate = `<!DOCTYPE html>
 <html lang="ja">
@@ -1209,7 +1467,7 @@ ${cssContent}
   <div id="slideContainer" class="slide-container"></div>
 
   <script>
-    window.__INJECTED_STATE__ = ${stateJson};
+    window.__INJECTED_STATE__ = ${originalStateJson};
   </script>
   <script>
 ${stateJsContent}
@@ -1258,6 +1516,7 @@ importJsonInput.addEventListener('change', (e) => {
 });
 
 document.addEventListener('mouseup', (e) => {
+  clearSnapGuides();
   if (dragTarget || resizeTarget) {
     if (dragTarget && groupDragInitialPositions.length > 0) {
       groupDragInitialPositions.forEach(pos => {

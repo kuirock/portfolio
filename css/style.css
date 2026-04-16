@@ -414,3 +414,28 @@ body {
   background: #00f2ff;
   color: #000;
 }
+
+/* スマートガイド（スナップ線） */
+.snap-guide {
+  position: absolute;
+  background-color: #ff00ff;
+  /* マゼンタのサイバーカラー */
+  box-shadow: 0 0 8px #ff00ff;
+  pointer-events: none;
+  /* マウスの邪魔をしない */
+  z-index: 9999;
+  display: none;
+  /* 普段は隠しておく */
+}
+
+.snap-guide-x {
+  width: 1px;
+  height: 100%;
+  top: 0;
+}
+
+.snap-guide-y {
+  height: 1px;
+  width: 100%;
+  left: 0;
+}
