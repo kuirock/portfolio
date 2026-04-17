@@ -7,6 +7,7 @@ let resizeCorner = null;
 let startRect = null;
 let startMouse = null;
 let groupDragInitialPositions = [];
+let dragAxisLock = null; // 💡 NEW: どっちの方向に動かしているかを記憶する箱！
 
 const propertyPanelHeader = document.getElementById('propertyPanelHeader');
 let isDraggingPanel = false;
@@ -116,6 +117,7 @@ slideContainer.addEventListener('mousedown', (e) => {
         if (typeof saveState === 'function') saveState();
         dragTarget = slideEl;
         startMouse = { x: e.clientX, y: e.clientY };
+        dragAxisLock = null; // 💡 NEW: つかんだ瞬間にロックをリセット！
 
         groupDragInitialPositions = [];
         state.selectedElementIds.forEach(selectedId => {
@@ -139,6 +141,8 @@ let isUpdatingFrame = false;
 let latestMouseEvent = null;
 let accMoveX = 0;
 let accMoveY = 0;
+
+const DRAG_SENSITIVITY = 1.0;
 
 document.addEventListener('mousemove', (e) => {
     if (isDraggingPanel) {
@@ -165,8 +169,8 @@ document.addEventListener('mousemove', (e) => {
             const stateEl = state.slides[state.currentSlide].find(item => item.id === dragTarget.dataset.id);
 
             if (stateEl && stateEl.cropMode) {
-                const dx = totalMoveX * -0.5;
-                const dy = totalMoveY * -0.5;
+                const dx = totalMoveX * -0.5 * DRAG_SENSITIVITY;
+                const dy = totalMoveY * -0.5 * DRAG_SENSITIVITY;
                 let newCropX = Math.max(0, Math.min(100, (stateEl.cropX || 50) + dx));
                 let newCropY = Math.max(0, Math.min(100, (stateEl.cropY || 50) + dy));
                 stateEl.cropX = newCropX;
@@ -174,8 +178,30 @@ document.addEventListener('mousemove', (e) => {
                 const img = dragTarget.querySelector('img');
                 if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
             } else {
-                let dx = (ev.clientX - startMouse.x) / currentScale;
-                let dy = (ev.clientY - startMouse.y) / currentScale;
+                let dx = ((ev.clientX - startMouse.x) / currentScale) * DRAG_SENSITIVITY;
+                let dy = ((ev.clientY - startMouse.y) / currentScale) * DRAG_SENSITIVITY;
+
+                // 💡 NEW: Shiftキーで平行移動（プロ仕様の軸ロック！）
+                if (ev.shiftKey) {
+                    if (!dragAxisLock) {
+                        // 5ピクセル以上動いたタイミングで、どっちの動きが大きいか判定して「軸」をロックする！
+                        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                            dragAxisLock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+                        }
+                    }
+
+                    if (dragAxisLock === 'x') {
+                        dy = 0; // 横にロックされたら、どんなにマウスが斜めにブレても縦には動かさない！
+                    } else if (dragAxisLock === 'y') {
+                        dx = 0; // 縦にロックされたら、横のブレを完全に無視！
+                    } else {
+                        // ロックが決まる前（5px未満の最初の一瞬）は、とりあえず大きい方を採用
+                        if (Math.abs(dx) > Math.abs(dy)) dy = 0;
+                        else dx = 0;
+                    }
+                } else {
+                    dragAxisLock = null; // Shiftを離したらロック解除！いつでも自由に動けるようにする
+                }
 
                 if (groupDragInitialPositions.length === 1) {
                     const SNAP_THRESHOLD = 7;
@@ -260,8 +286,8 @@ document.addEventListener('mousemove', (e) => {
                 }
             }
         } else if (resizeTarget) {
-            const dx = (ev.clientX - startMouse.x) / currentScale;
-            const dy = (ev.clientY - startMouse.y) / currentScale;
+            const dx = ((ev.clientX - startMouse.x) / currentScale) * DRAG_SENSITIVITY;
+            const dy = ((ev.clientY - startMouse.y) / currentScale) * DRAG_SENSITIVITY;
 
             let baseNewLeft = startRect.left;
             let baseNewTop = startRect.top;
@@ -360,6 +386,7 @@ document.addEventListener('mousemove', (e) => {
                 resizeTarget.style.top = `${finalNewTop}px`;
             }
         }
+
         isUpdatingFrame = false;
     });
 });
@@ -370,6 +397,7 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('mouseup', (e) => {
     isDraggingPanel = false;
     clearSnapGuides();
+    dragAxisLock = null; // 💡 NEW: 指を離した時もロックを解除！
 
     if (dragTarget || resizeTarget) {
         if (dragTarget && groupDragInitialPositions.length > 0) {

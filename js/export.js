@@ -186,7 +186,6 @@ document.addEventListener('dblclick', () => {
 document.addEventListener('DOMContentLoaded', updateUI);
 `;
 
-    const originalStateJson = JSON.stringify(state);
 
     const htmlTemplate = `<!DOCTYPE html>
 <html lang="ja">
@@ -210,7 +209,7 @@ ${cssContent}
   <div id="slideContainer" class="slide-container"></div>
 
   <script>
-    window.__INJECTED_STATE__ = ${originalStateJson};
+    window.__INJECTED_STATE__ = ${stateJson};
   </script>
   <script>
 ${stateJsContent}
@@ -257,3 +256,35 @@ importJsonInput.addEventListener('change', (e) => {
   }
   e.target.value = ''; // reset
 });
+
+// ==========================================
+// スライドを初期状態（白紙）にリセットする機能
+// ==========================================
+const resetBtn = document.getElementById('resetBtn');
+
+if (resetBtn) {
+  resetBtn.addEventListener('click', () => {
+    // 間違えて押しちゃった時のために、確認のポップアップ（アラート）を出すよ！
+    const isOk = confirm('🚨 WARNING 🚨\nすべてのスライドをリセットして白紙に戻しますか？\n（「Save as File」していないデータは完全に消えちゃいます！）');
+
+    if (isOk) {
+      // 1. 今ある画像の「幻のリンク（Blob URL）」をメモリからお掃除！
+      state.slides.forEach(slide => {
+        slide.forEach(el => {
+          if (el.type === 'image' && el.src.startsWith('blob:')) {
+            URL.revokeObjectURL(el.src);
+          }
+        });
+      });
+
+      // 2. データを「スライド1枚だけの白紙状態」に強制上書き！
+      state.slides = [[]];
+      state.currentSlide = 0;
+      state.selectedElementIds = [];
+
+      // 3. セーブして画面を更新！
+      if (typeof saveState === 'function') saveState();
+      if (typeof updateUI === 'function') updateUI();
+    }
+  });
+}

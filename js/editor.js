@@ -220,15 +220,17 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Save shortcut
-  if (e.ctrlKey && e.key.toLowerCase() === 's') {
+  // 💾 Save shortcut (Ctrl+S / Cmd+S)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
     e.preventDefault();
-    saveToLocalStorage();
+    if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
     return;
   }
-  // Undo shortcut
-  if (e.ctrlKey && e.key === 'z') {
-    undo();
+
+  // ↩️ Undo shortcut (Ctrl+Z / Cmd+Z)
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault(); // 👈 ブラウザの標準Undo機能と喧嘩しないようにブロック！
+    if (typeof undo === 'function') undo();
     return;
   }
 
