@@ -40,9 +40,7 @@ function saveToLocalStorage() {
     try {
         localStorage.setItem('cyberpunk_state', JSON.stringify(state));
     } catch (e) {
-        // 5MBの限界を突破した時のアラート！
         console.error("LocalStorage quota exceeded!", e);
-        alert("⚠️ ブラウザの自動保存容量（約5MB）がいっぱいになっちゃった！\nこれ以上は自動保存されないから、必ず「Save as File」ボタンでこまめにパソコンに保存してね！");
     }
 }
 

@@ -1,4 +1,5 @@
 const slideContainer = document.getElementById('slideContainer');
+let clipboard = null;
 let currentScale = 1;
 function resizeContainer() {
   const margin = 20; // 20px padding around container
@@ -81,59 +82,6 @@ function updateUI() {
   }
 }
 
-// スナップガイドの要素を管理
-let guideLineX, guideLineY;
-
-function drawSnapGuides(x, y) {
-  // スナップガイドの要素を管理
-  let guideLineX = null;
-  let guideLineY = null;
-
-  function drawSnapGuides(x, y) {
-    // まだ作られてなかったら作る
-    if (!guideLineX) {
-      guideLineX = document.createElement('div');
-      guideLineX.className = 'snap-guide snap-guide-x';
-      guideLineY = document.createElement('div');
-      guideLineY.className = 'snap-guide snap-guide-y';
-    }
-
-    // ▼▼ ここを追加！ ▼▼
-    // updateUI() で画面がリセットされて DOM（HTML）から消えちゃってたら、復活させる！
-    if (!guideLineX.parentElement) {
-      slideContainer.appendChild(guideLineX);
-    }
-    if (!guideLineY.parentElement) {
-      slideContainer.appendChild(guideLineY);
-    }
-    // ▲▲ ここまで ▲▲
-
-    if (x !== null) {
-      guideLineX.style.display = 'block';
-      guideLineX.style.left = `${x}px`;
-    } else {
-      guideLineX.style.display = 'none';
-    }
-
-    if (y !== null) {
-      guideLineY.style.display = 'block';
-      guideLineY.style.top = `${y}px`;
-    } else {
-      guideLineY.style.display = 'none';
-    }
-  }
-
-  function clearSnapGuides() {
-    if (guideLineX) guideLineX.style.display = 'none';
-    if (guideLineY) guideLineY.style.display = 'none';
-  }
-}
-
-function clearSnapGuides() {
-  if (guideLineX) guideLineX.style.display = 'none';
-  if (guideLineY) guideLineY.style.display = 'none';
-}
-
 prevBtn.addEventListener('click', () => {
   if (state.currentSlide > 0) {
     state.currentSlide--;
@@ -162,6 +110,14 @@ insertSlideBtn.addEventListener('click', () => {
 
 delSlideBtn.addEventListener('click', () => {
   saveState();
+
+  const slideToDelete = state.slides[state.currentSlide];
+  slideToDelete.forEach(el => {
+    if (el.type === 'image' && el.src.startsWith('blob:')) {
+      URL.revokeObjectURL(el.src); // 幻のリンクを破棄！
+    }
+  });
+
   state.slides.splice(state.currentSlide, 1);
   if (state.slides.length === 0) {
     state.slides.push([]);
@@ -200,7 +156,8 @@ undoBtn.addEventListener('click', undo);
 // --- プレゼンモードの魔法 ---
 let isPresentationMode = false;
 
-startPresBtn.addEventListener('click', () => {
+startPresBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); // 👈 クリックの合図が画面全体に伝わるのをここでブロック！
   isPresentationMode = true;
   state.selectedElementIds = []; // 選択中の枠線を消す
   updateUI();
@@ -278,6 +235,14 @@ document.addEventListener('keydown', (e) => {
   // Delete selected element
   if ((e.key === 'Backspace' || e.key === 'Delete') && state.selectedElementIds.length > 0) {
     saveState();
+
+    const elementsToDelete = state.slides[state.currentSlide].filter(el => state.selectedElementIds.includes(el.id));
+    elementsToDelete.forEach(el => {
+      if (el.type === 'image' && el.src.startsWith('blob:')) {
+        URL.revokeObjectURL(el.src); // 幻のリンクを破棄してメモリを空ける！
+      }
+    });
+
     state.slides[state.currentSlide] = state.slides[state.currentSlide].filter(el => !state.selectedElementIds.includes(el.id));
     state.selectedElementIds = [];
     updateUI();
@@ -550,7 +515,11 @@ function renderSlide() {
       textInner.addEventListener('blur', () => {
         textInner.contentEditable = "false";
         textInner.style.cursor = "move";
-        saveState();
+
+        // 💡 編集が終わってマウスが離れたら、止めていたアニメーションを復活させる！
+        div.style.animation = '';
+
+        if (typeof saveState === 'function') saveState();
       });
       div.appendChild(textInner);
     } else if (el.type === 'shape') {
@@ -598,315 +567,47 @@ function renderSlide() {
 }
 
 // Double click actions
+// Double click actions
 slideContainer.addEventListener('dblclick', (e) => {
-  if (isPresentationMode) return; // プレゼン中は編集禁止！
+  if (typeof isPresentationMode !== 'undefined' && isPresentationMode) return; // プレゼン中は編集禁止！
+
+  // ▼ 1. 文字の隙間をクリックしても「テキスト枠全体」として判定する！
+  const textParent = e.target.closest('.slide-element.text');
+
   if (e.target.classList.contains('shape')) {
     // Toggle border radius of shapes
     const id = e.target.dataset.id;
     const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
     if (stateEl) {
       stateEl.borderRadius = stateEl.borderRadius === '50%' ? '0' : '50%';
-      updateUI();
+      if (typeof updateUI === 'function') updateUI();
     }
-  } else if (e.target.classList.contains('text-content')) {
-    // Edit text inner wrapper
-    e.target.contentEditable = "true";
-    e.target.style.cursor = "text";
-    e.target.focus();
+  } else if (textParent) {
+    // ▼ 2. 枠内のテキスト本体（text-content）を見つけ出す！
+    const textContent = textParent.querySelector('.text-content');
 
-    // Move cursor to end
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(e.target);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
+    if (textContent) {
+      // 💡 最強の解決策：編集中は文字がブレて選択できないので、アニメーションを一時停止！
+      textParent.style.animation = 'none';
+
+      textContent.contentEditable = "true";
+      textContent.style.cursor = "text";
+      textContent.focus();
+
+      // Move cursor to end
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(textContent);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   }
 });
 
 // Initial render
 document.addEventListener('DOMContentLoaded', updateUI);
 
-// --- Agent 3: Interaction & Drag-and-Drop ---
-let dragTarget = null;
-let resizeTarget = null;
-let resizeCorner = null;
-let startRect = null;
-let startMouse = null;
-let groupDragInitialPositions = [];
-
-// グローバルスコープにクリップボードを用意
-let clipboard = [];
-
-// Property Panel Dragging
-const propertyPanelHeader = document.getElementById('propertyPanelHeader');
-let isDraggingPanel = false;
-let panelOffsetX = 0;
-let panelOffsetY = 0;
-
-propertyPanelHeader.addEventListener('mousedown', (e) => {
-  isDraggingPanel = true;
-  const rect = propertyPanel.getBoundingClientRect();
-  panelOffsetX = e.clientX - rect.left;
-  panelOffsetY = e.clientY - rect.top;
-
-  // Switch from right/top to left/top to avoid sizing issues during drag
-  propertyPanel.style.right = 'auto';
-  propertyPanel.style.left = `${rect.left}px`;
-  propertyPanel.style.top = `${rect.top}px`;
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (isDraggingPanel) {
-    propertyPanel.style.left = `${e.clientX - panelOffsetX}px`;
-    propertyPanel.style.top = `${e.clientY - panelOffsetY}px`;
-  }
-});
-
-document.addEventListener('mouseup', () => {
-  isDraggingPanel = false;
-});
-
-slideContainer.addEventListener('mousedown', (e) => {
-  if (isPresentationMode) return; // プレゼン中はドラッグ禁止！
-  // Fix text selection drag conflict: prevent drag initialization if clicking inside an actively editable text element
-  if (e.target.isContentEditable || e.target.closest('[contenteditable="true"]')) {
-    return;
-  }
-
-  // Handle click on slide container background to deselect
-  if (e.target === slideContainer) {
-    state.selectedElementIds = [];
-    updateUI();
-    return;
-  }
-
-  if (e.target.classList.contains('resize-handle')) {
-    resizeTarget = e.target.parentElement;
-    resizeCorner = e.target.dataset.corner;
-    // getBoundingClientRect() を使わず、内部の論理値（px）を直接取得
-    startRect = {
-      width: parseFloat(resizeTarget.style.width) || resizeTarget.offsetWidth,
-      height: parseFloat(resizeTarget.style.height) || resizeTarget.offsetHeight,
-      left: parseFloat(resizeTarget.style.left) || 0,
-      top: parseFloat(resizeTarget.style.top) || 0
-    };
-    startMouse = { x: e.clientX, y: e.clientY };
-    return;
-  }
-
-  const slideEl = e.target.closest('.slide-element');
-  if (slideEl) {
-    const id = slideEl.dataset.id;
-    if (e.shiftKey) {
-      // Toggle selection
-      if (state.selectedElementIds.includes(id)) {
-        state.selectedElementIds = state.selectedElementIds.filter(i => i !== id);
-      } else {
-        state.selectedElementIds.push(id);
-      }
-      updateUI();
-    } else {
-      // Select only this if not already in selection
-      if (!state.selectedElementIds.includes(id)) {
-        state.selectedElementIds = [id];
-        updateUI();
-      }
-    }
-
-    // Start drag
-    saveState(); // Save state before dragging
-    dragTarget = slideEl;
-    startMouse = { x: e.clientX, y: e.clientY };
-
-    // Group drag setup
-    groupDragInitialPositions = [];
-    state.selectedElementIds.forEach(selectedId => {
-      const domEl = document.querySelector(`.slide-element[data-id="${selectedId}"]`);
-      if (domEl) {
-        groupDragInitialPositions.push({
-          id: selectedId,
-          dom: domEl,
-          initialX: parseFloat(domEl.style.left) || 0,
-          initialY: parseFloat(domEl.style.top) || 0
-        });
-      }
-    });
-  }
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (dragTarget) {
-    const stateEl = state.slides[state.currentSlide].find(item => item.id === dragTarget.dataset.id);
-
-    if (stateEl && stateEl.cropMode) {
-      // ...(元のcropModeの処理はそのまま残す)
-      const dx = e.movementX * -0.5;
-      const dy = e.movementY * -0.5;
-      let newCropX = Math.max(0, Math.min(100, (stateEl.cropX || 50) + dx));
-      let newCropY = Math.max(0, Math.min(100, (stateEl.cropY || 50) + dy));
-      stateEl.cropX = newCropX;
-      stateEl.cropY = newCropY;
-      const img = dragTarget.querySelector('img');
-      if (img) img.style.objectPosition = `${newCropX}% ${newCropY}%`;
-    } else {
-      let dx = (e.clientX - startMouse.x) / currentScale;
-      let dy = (e.clientY - startMouse.y) / currentScale;
-
-      if (groupDragInitialPositions.length === 1) { // 単一要素ドラッグ時のみスナップを有効化
-        const SNAP_THRESHOLD = 7; // 吸い付く強さ（ピクセル）
-        const pos = groupDragInitialPositions[0];
-
-        let newX = pos.initialX + dx;
-        let newY = pos.initialY + dy;
-        const elWidth = dragTarget.offsetWidth;
-        const elHeight = dragTarget.offsetHeight;
-
-        // ▼▼ 1. スナップ候補の座標を集める ▼▼
-        const targetXs = [0, 1280 / 2, 1280]; // 画面の左、中央、右
-        const targetYs = [0, 720 / 2, 720];   // 画面の上、中央、下
-
-        // 他の要素の座標も候補に追加
-        state.slides[state.currentSlide].forEach(otherEl => {
-          if (otherEl.id !== pos.id) {
-            const oW = otherEl.width || 100;
-            const oH = otherEl.height || 100;
-            targetXs.push(otherEl.x, otherEl.x + oW / 2, otherEl.x + oW);
-            targetYs.push(otherEl.y, otherEl.y + oH / 2, otherEl.y + oH);
-          }
-        });
-
-        // ▼▼ 2. 吸い付き（スナップ）判定 ▼▼
-        let snappedX = null;
-        let snappedY = null;
-
-        // X軸のスナップ（左端、中央、右端を判定）
-        for (let tx of targetXs) {
-          if (Math.abs(newX - tx) < SNAP_THRESHOLD) { newX = tx; snappedX = tx; break; }
-          if (Math.abs((newX + elWidth / 2) - tx) < SNAP_THRESHOLD) { newX = tx - elWidth / 2; snappedX = tx; break; }
-          if (Math.abs((newX + elWidth) - tx) < SNAP_THRESHOLD) { newX = tx - elWidth; snappedX = tx; break; }
-        }
-
-        // Y軸のスナップ
-        for (let ty of targetYs) {
-          if (Math.abs(newY - ty) < SNAP_THRESHOLD) { newY = ty; snappedY = ty; break; }
-          if (Math.abs((newY + elHeight / 2) - ty) < SNAP_THRESHOLD) { newY = ty - elHeight / 2; snappedY = ty; break; }
-          if (Math.abs((newY + elHeight) - ty) < SNAP_THRESHOLD) { newY = ty - elHeight; snappedY = ty; break; }
-        }
-
-        // ▼▼ 3. ガイド線の描画 ▼▼
-        drawSnapGuides(snappedX, snappedY);
-
-        // スナップした結果を実際に適用
-        pos.dom.style.left = `${newX}px`;
-        pos.dom.style.top = `${newY}px`;
-
-      } else if (groupDragInitialPositions.length > 1) {
-        // 複数選択時はスナップさせずそのまま移動
-        groupDragInitialPositions.forEach(pos => {
-          pos.dom.style.left = `${pos.initialX + dx}px`;
-          pos.dom.style.top = `${pos.initialY + dy}px`;
-        });
-        clearSnapGuides();
-      }
-    }
-  } else if (resizeTarget) {
-    const dx = (e.clientX - startMouse.x) / currentScale;
-    const dy = (e.clientY - startMouse.y) / currentScale;
-
-    let newWidth = startRect.width;
-    let newHeight = startRect.height;
-    let newLeft = startRect.left;
-    let newTop = startRect.top;
-
-    // まず普通にマウスの移動量からサイズと位置を計算
-    if (resizeCorner.includes('e')) newWidth = startRect.width + dx;
-    if (resizeCorner.includes('s')) newHeight = startRect.height + dy;
-    if (resizeCorner.includes('w')) {
-      newWidth = startRect.width - dx;
-      newLeft = startRect.left + dx;
-    }
-    if (resizeCorner.includes('n')) {
-      newHeight = startRect.height - dy;
-      newTop = startRect.top + dy;
-    }
-
-    // ▼▼ ここからリサイズ用のスナップ（吸い付き）ロジック！ ▼▼
-    const SNAP_THRESHOLD = 15;
-    const targetXs = [0, 1280 / 2, 1280];
-    const targetYs = [0, 720 / 2, 720];
-
-    // 他の要素の座標を集める
-    state.slides[state.currentSlide].forEach(otherEl => {
-      if (otherEl.id !== resizeTarget.dataset.id) {
-        const oW = otherEl.width || 100;
-        const oH = otherEl.height || 100;
-        targetXs.push(otherEl.x, otherEl.x + oW / 2, otherEl.x + oW);
-        targetYs.push(otherEl.y, otherEl.y + oH / 2, otherEl.y + oH);
-      }
-    });
-
-    let snappedX = null;
-    let snappedY = null;
-
-    // 【X軸のスナップ】右辺（e）を引っ張っているか、左辺（w）を引っ張っているかで判定を変える！
-    if (resizeCorner.includes('e')) {
-      let currentRight = newLeft + newWidth;
-      for (let tx of targetXs) {
-        if (Math.abs(currentRight - tx) < SNAP_THRESHOLD) {
-          newWidth = tx - newLeft; // 右辺が吸い付いた分、幅を調整
-          snappedX = tx;
-          break;
-        }
-      }
-    } else if (resizeCorner.includes('w')) {
-      for (let tx of targetXs) {
-        if (Math.abs(newLeft - tx) < SNAP_THRESHOLD) {
-          newWidth = (startRect.left + startRect.width) - tx; // 右辺は固定で、左辺が吸い付いた分幅を調整
-          newLeft = tx;
-          snappedX = tx;
-          break;
-        }
-      }
-    }
-
-    // 【Y軸のスナップ】下辺（s）を引っ張っているか、上辺（n）を引っ張っているかで判定を変える！
-    if (resizeCorner.includes('s')) {
-      let currentBottom = newTop + newHeight;
-      for (let ty of targetYs) {
-        if (Math.abs(currentBottom - ty) < SNAP_THRESHOLD) {
-          newHeight = ty - newTop; // 下辺が吸い付いた分、高さを調整
-          snappedY = ty;
-          break;
-        }
-      }
-    } else if (resizeCorner.includes('n')) {
-      for (let ty of targetYs) {
-        if (Math.abs(newTop - ty) < SNAP_THRESHOLD) {
-          newHeight = (startRect.top + startRect.height) - ty; // 下辺は固定で、上辺が吸い付いた分高さを調整
-          newTop = ty;
-          snappedY = ty;
-          break;
-        }
-      }
-    }
-
-    // ガイド線を引く！
-    drawSnapGuides(snappedX, snappedY);
-
-    // Enforce minimum size
-    const minWidth = resizeTarget.classList.contains('text') ? 50 : 5;
-    const minHeight = resizeTarget.classList.contains('text') ? 30 : 5;
-
-    if (newWidth > minWidth && newHeight > minHeight) {
-      resizeTarget.style.width = `${newWidth}px`;
-      resizeTarget.style.height = `${newHeight}px`;
-      // 親コンテナからの相対位置を計算する必要がないため、そのまま適用
-      resizeTarget.style.left = `${newLeft}px`;
-      resizeTarget.style.top = `${newTop}px`;
-    }
-  }
-});
 
 colorPicker.addEventListener('change', (e) => {
   saveState();
@@ -1253,299 +954,3 @@ function distributeSelectedElements(axis) {
 
 distributeXBtn.addEventListener('click', () => distributeSelectedElements('x'));
 distributeYBtn.addEventListener('click', () => distributeSelectedElements('y'));
-
-
-const exportJsonBtn = document.getElementById('exportJsonBtn');
-const importJsonBtn = document.getElementById('importJsonBtn');
-const importJsonInput = document.getElementById('importJsonInput');
-const exportHtmlBtn = document.getElementById('exportHtmlBtn');
-
-exportHtmlBtn.addEventListener('click', async () => {
-  exportHtmlBtn.textContent = 'Exporting...';
-  exportHtmlBtn.disabled = true;
-
-  try {
-    // ▼▼ 魔法：書き出す直前に Base64 に焼き直す！ ▼▼
-    const exportState = JSON.parse(JSON.stringify(state)); // コピーを作る
-    for (let i = 0; i < exportState.slides.length; i++) {
-      for (let j = 0; j < exportState.slides[i].length; j++) {
-        const el = exportState.slides[i][j];
-        if (el.type === 'image' && el.src.startsWith('blob:')) {
-          // 幻のリンクからデータを吸い出してBase64に変換！
-          const res = await fetch(el.src);
-          const blob = await res.blob();
-          el.src = await new Promise(r => {
-            const reader = new FileReader();
-            reader.onloadend = () => r(reader.result);
-            reader.readAsDataURL(blob);
-          });
-        }
-      }
-    }
-    const stateJson = JSON.stringify(exportState); // 焼き直したデータを文字にする！
-    const cssContent = `
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; color: #00f2ff; }
-#glitchCanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; }
-.slide-container { position: absolute; top: 50%; left: 50%; transform-origin: center center; transform: translate(-50%, -50%) scale(1); width: 1280px; height: 720px; background: rgba(0, 20, 20, 0.4); backdrop-filter: blur(10px); border: 1px solid #00f2ff; box-shadow: 0 0 15px rgba(0, 242, 255, 0.3); overflow: hidden; z-index: 1; }
-.slide-element { position: absolute; user-select: none; }
-.slide-element img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.slide-element.image { border: 1px solid #00f2ff; }
-.slide-element.text { font-size: 24px; min-width: 50px; min-height: 30px; padding: 5px; outline: none; border: 1px dashed transparent; display: flex; }
-.text-content { width: 100%; height: auto; white-space: pre-wrap; word-wrap: break-word; outline: none; }
-.glitch-text { animation: textGlitch 1.5s infinite linear; }
-@keyframes textGlitch {
-  0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% { text-shadow: none; transform: translate(0, 0); }
-  5%, 55% { text-shadow: 5px 0 0 #ff0000, -5px 0 0 #0000ff; transform: translate(-3px, 0); }
-  15%, 65% { text-shadow: -4px 0 0 #ff0000, 4px 0 0 #0000ff; transform: translate(3px, 0); }
-  25%, 75% { text-shadow: 3px 0 0 #ff0000, -3px 0 0 #0000ff; transform: translate(-1px, 2px); }
-  35%, 85% { text-shadow: -6px 0 0 #ff0000, 6px 0 0 #0000ff; transform: translate(2px, -2px); }
-  45%, 95% { text-shadow: 2px 0 0 #ff0000, -2px 0 0 #0000ff; transform: translate(-2px, 0); }
-}
-.gaming-text-fx { background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); background-size: 400%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gamingColor 3s linear infinite; }
-@keyframes gamingColor { 0% { background-position: 0%; } 100% { background-position: 400%; } }
-.slide-element.shape { background-color: rgba(0, 242, 255, 0.2); border: 2px solid #00f2ff; position: absolute; overflow: hidden; animation: shapeGlitch 4s infinite; }
-@keyframes shapeGlitch { 0% { opacity: 1; transform: translate(0, 0); } 2% { opacity: 0.8; transform: translate(-2px, 1px); background-color: rgba(0, 242, 255, 0.4); } 4% { opacity: 1; transform: translate(2px, -1px); } 6% { opacity: 0.9; transform: translate(0, 0); background-color: rgba(0, 242, 255, 0.2); } 45% { opacity: 1; transform: translate(0, 0); } 46% { opacity: 0.7; transform: translate(1px, 2px); } 48% { opacity: 1; transform: translate(-1px, -2px); } 50% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 1; transform: translate(0, 0); } }
-.slide-element.shape::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px); pointer-events: none; z-index: 1; }
-`;
-
-    const stateJsContent = `
-let state = { currentSlide: 0, selectedElementIds: [], slides: [ [] ] };
-const savedState = window.__INJECTED_STATE__ ? JSON.stringify(window.__INJECTED_STATE__) : localStorage.getItem('cyberpunk_state');
-if (savedState) {
-    try {
-        const parsedState = JSON.parse(savedState);
-        parsedState.selectedElementIds = [];
-        state = parsedState;
-    } catch (e) { console.error(e); }
-}
-`;
-
-    const bgJsContent = `
-const canvas = document.getElementById('glitchCanvas');
-const ctx = canvas.getContext('2d');
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
-const glitchBlocks = [];
-const numBlocks = 150;
-function initGlitchBlocks() {
-    glitchBlocks.length = 0;
-    for (let i = 0; i < numBlocks; i++) {
-      const size = Math.random() * 15 + 2;
-      const edge = Math.floor(Math.random() * 4);
-      let baseX = 0, baseY = 0;
-      const edgeOffset = (Math.random() - 0.5) * 80;
-      if (edge === 0) { baseX = Math.random() * canvas.width; baseY = 20 + edgeOffset; }
-      else if (edge === 1) { baseX = Math.random() * canvas.width; baseY = canvas.height - 20 + edgeOffset; }
-      else if (edge === 2) { baseX = 20 + edgeOffset; baseY = Math.random() * canvas.height; }
-      else if (edge === 3) { baseX = canvas.width - 20 + edgeOffset; baseY = Math.random() * canvas.height; }
-      glitchBlocks.push({ baseX, baseY, edge, width: size, height: size, baseOpacity: Math.random() * 0.8 + 0.2 });
-    }
-}
-initGlitchBlocks();
-window.addEventListener('resize', initGlitchBlocks);
-function drawGlitch() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const time = Date.now();
-  const tMod = time % 1200;
-  const ecgSpike = Math.exp(-Math.pow(tMod - 600, 2) / 800) * 1.5;
-  const jitterSpike = (Math.random() > 0.98) ? Math.random() * 2 : 0;
-  const globalPulse = ecgSpike + jitterSpike;
-  glitchBlocks.forEach(block => {
-    let posOnEdge = (block.edge === 0 || block.edge === 1) ? block.baseX / canvas.width : block.baseY / canvas.height;
-    const hue = (posOnEdge * 360 + time / 20) % 360;
-    ctx.fillStyle = \`hsl(\${hue}, 70%, 50%)\`;
-    ctx.shadowBlur = 15; ctx.shadowColor = ctx.fillStyle;
-    const wave1 = Math.sin(posOnEdge * 50 + time / 150);
-    const wave2 = Math.sin(posOnEdge * 20 - time / 220);
-    const localNoise = Math.max(0, (wave1 + wave2) / 2);
-    const combinedPulse = Math.max(0, localNoise * 0.5 + globalPulse);
-    let spikeMultiplier = (Math.random() > 0.99) ? Math.random() * 2 + 1.5 : 1;
-    let currentOpacity = (Math.random() > 0.8) ? Math.random() * 0.8 : block.baseOpacity;
-    ctx.globalAlpha = Math.min(1.0, (currentOpacity + combinedPulse * 0.5) * spikeMultiplier);
-    let offsetX = (Math.random() - 0.5) * 10 * spikeMultiplier;
-    let offsetY = (Math.random() - 0.5) * 10 * spikeMultiplier;
-    const scale = 1 + combinedPulse * 1.5 * spikeMultiplier;
-    const drawWidth = block.width * scale; const drawHeight = block.height * scale;
-    ctx.fillRect(block.baseX + offsetX - (drawWidth - block.width)/2, block.baseY + offsetY - (drawHeight - block.height)/2, drawWidth, drawHeight);
-    ctx.shadowBlur = 0;
-  });
-  ctx.globalAlpha = 1.0; requestAnimationFrame(drawGlitch);
-}
-drawGlitch();
-`;
-
-    const viewerJsContent = `
-const slideContainer = document.getElementById('slideContainer');
-let currentScale = 1;
-function resizeContainer() {
-    const margin = 40;
-    const scaleX = (window.innerWidth - margin) / 1280;
-    const scaleY = (window.innerHeight - margin) / 720;
-    currentScale = Math.min(scaleX, scaleY, 1);
-    slideContainer.style.transform = \`translate(-50%, -50%) scale(\${currentScale})\`;
-}
-window.addEventListener('resize', resizeContainer);
-resizeContainer();
-
-function updateUI() { renderSlide(); }
-function renderSlide() {
-  slideContainer.innerHTML = '';
-  const currentElements = state.slides[state.currentSlide];
-  currentElements.forEach(el => {
-    const elWidth = el.width || 200;
-    const elHeight = el.height || 200;
-    const isOffScreen = (el.x + elWidth < -500) || (el.x > 1780) || (el.y + elHeight < -500) || (el.y > 1220);
-    if (isOffScreen) return;
-    const div = document.createElement('div');
-    div.classList.add('slide-element', el.type);
-    div.style.left = \`\${el.x}px\`; div.style.top = \`\${el.y}px\`; div.style.zIndex = el.zIndex || 1;
-    if (el.type === 'text') {
-      const textInner = document.createElement('div'); textInner.className = 'text-content'; textInner.innerHTML = el.content;
-      div.classList.add('glitch-text');
-      if (el.isGamingColor) textInner.classList.add('gaming-text-fx');
-      if (el.color) div.style.color = el.color;
-      if (el.fontFamily) div.style.fontFamily = el.fontFamily;
-      if (el.fontSize) div.style.fontSize = \`\${el.fontSize}px\`;
-      if (el.fontWeight) div.style.fontWeight = el.fontWeight;
-      if (el.width) div.style.width = \`\${el.width}px\`;
-      if (el.height) div.style.height = \`auto\`;
-      div.appendChild(textInner);
-    } else if (el.type === 'shape') {
-      div.style.width = \`\${el.width}px\`; div.style.height = \`\${el.height}px\`; div.style.borderRadius = el.borderRadius || '0';
-      if (el.backgroundColor) div.style.backgroundColor = el.backgroundColor;
-      if (el.borderColor) div.style.border = \`2px solid \${el.borderColor}\`;
-    } else if (el.type === 'image') {
-      div.style.width = \`\${el.width}px\`; div.style.height = \`\${el.height}px\`; div.style.overflow = "hidden";
-      const img = document.createElement('img'); img.src = el.src; img.style.objectFit = "cover"; img.style.width = "100%"; img.style.height = "100%";
-      const cropX = el.cropX !== undefined ? el.cropX : 50; const cropY = el.cropY !== undefined ? el.cropY : 50;
-      img.style.objectPosition = \`\${cropX}% \${cropY}%\`; div.appendChild(img);
-    }
-    slideContainer.appendChild(div);
-  });
-}
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-        if (state.currentSlide < state.slides.length - 1) { state.currentSlide++; updateUI(); }
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        if (state.currentSlide > 0) { state.currentSlide--; updateUI(); }
-    }
-});
-document.addEventListener('click', () => {
-    if (state.currentSlide < state.slides.length - 1) { state.currentSlide++; updateUI(); }
-});
-document.addEventListener('dblclick', () => {
-    if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(e=>console.error(e)); }
-    else { document.exitFullscreen(); }
-});
-document.addEventListener('DOMContentLoaded', updateUI);
-`;
-
-    const originalStateJson = JSON.stringify(state);
-
-    const htmlTemplate = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyberpunk Presentation</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-  <style>
-${cssContent}
-  /* Override for viewer mode: no borders, hide overflow */
-  body { cursor: none; }
-  .slide-container { border: none; box-shadow: none; background: transparent; backdrop-filter: none;}
-  .slide-element { cursor: default; }
-  </style>
-</head>
-<body>
-  <canvas id="glitchCanvas"></canvas>
-  <div id="slideContainer" class="slide-container"></div>
-
-  <script>
-    window.__INJECTED_STATE__ = ${originalStateJson};
-  </script>
-  <script>
-${stateJsContent}
-  </script>
-  <script>
-${bgJsContent}
-  </script>
-  <script>
-${viewerJsContent}
-  </script>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlTemplate], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'presentation_export.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error("Failed to export HTML", e);
-    alert("Failed to export HTML.");
-  } finally {
-    exportHtmlBtn.textContent = 'Export Single HTML';
-    exportHtmlBtn.disabled = false;
-  }
-});
-
-exportJsonBtn.addEventListener('click', () => {
-  exportStateToJson();
-});
-
-importJsonBtn.addEventListener('click', () => {
-  importJsonInput.click();
-});
-
-importJsonInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    importStateFromJson(file);
-  }
-  e.target.value = ''; // reset
-});
-
-document.addEventListener('mouseup', (e) => {
-  clearSnapGuides();
-  if (dragTarget || resizeTarget) {
-    if (dragTarget && groupDragInitialPositions.length > 0) {
-      groupDragInitialPositions.forEach(pos => {
-        const stateEl = state.slides[state.currentSlide].find(item => item.id === pos.id);
-        if (stateEl) {
-          stateEl.x = parseFloat(pos.dom.style.left);
-          stateEl.y = parseFloat(pos.dom.style.top);
-        }
-      });
-      saveState();
-    } else if (resizeTarget) {
-      const id = resizeTarget.dataset.id;
-      const stateEl = state.slides[state.currentSlide].find(item => item.id === id);
-      if (stateEl) {
-        stateEl.x = parseFloat(resizeTarget.style.left);
-        stateEl.y = parseFloat(resizeTarget.style.top);
-
-        // Update dimensions explicitly for all element types
-        const computedStyle = getComputedStyle(resizeTarget);
-        stateEl.width = parseFloat(computedStyle.width);
-        stateEl.height = parseFloat(computedStyle.height);
-
-        saveState(); // Ensure state persists after movement/resize
-      }
-    }
-
-    dragTarget = null;
-    resizeTarget = null;
-    resizeCorner = null;
-    groupDragInitialPositions = [];
-  }
-});
