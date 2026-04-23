@@ -28,7 +28,7 @@ const colorPicker = document.getElementById('colorPicker');
 const propertyPanel = document.getElementById('propertyPanel');
 const fontSelect = document.getElementById('fontSelect');
 const fontSizeInput = document.getElementById('fontSizeInput');
-const fontSizeVal = document.getElementById('fontSizeVal');
+const fontSizeNum = document.getElementById('fontSizeNum');
 const fontWeightSelect = document.getElementById('fontWeightSelect');
 const frontBtn = document.getElementById('frontBtn');
 const backBtn = document.getElementById('backBtn');
@@ -56,7 +56,7 @@ function updateUI() {
       if (stateEl.type === 'text') {
         fontSelect.value = stateEl.fontFamily || "'Courier New', Courier, monospace";
         fontSizeInput.value = stateEl.fontSize || 24;
-        if (fontSizeVal) fontSizeVal.textContent = stateEl.fontSize || 24;
+        if (fontSizeNum) fontSizeNum.value = stateEl.fontSize || 24;
         fontWeightSelect.value = stateEl.fontWeight || "normal";
         gamingColorCheckbox.checked = !!stateEl.isGamingColor;
         fontSelect.parentElement.style.display = 'flex';
@@ -704,10 +704,14 @@ fontSelect.addEventListener('change', (e) => {
   }
 });
 
-fontSizeInput.addEventListener('input', (e) => {
-  if (fontSizeVal) fontSizeVal.textContent = e.target.value;
+// ==========================================
+// 文字サイズの変更（スライダー＆直接入力対応）
+// ==========================================
+function changeFontSize(newSize) {
+  // スライダーと入力箱、両方の数値をシンクロさせる！
+  if (fontSizeInput) fontSizeInput.value = newSize;
+  if (fontSizeNum) fontSizeNum.value = newSize;
 
-  // Instead of execCommand 'fontSize' which only supports 1-7, we apply a span with styling if editing text
   const sel = window.getSelection();
   if (sel.rangeCount > 0 && !sel.isCollapsed) {
     const range = sel.getRangeAt(0);
@@ -715,13 +719,12 @@ fontSizeInput.addEventListener('input', (e) => {
     if (commonAncestor.nodeType === 3) commonAncestor = commonAncestor.parentNode;
 
     if (commonAncestor.isContentEditable || commonAncestor.closest('.text-content[contenteditable="true"]')) {
-      document.execCommand('fontSize', false, "7"); // Apply arbitrary large size
+      document.execCommand('fontSize', false, "7");
       const textContentEl = commonAncestor.closest('.text-content');
-      // Replace the injected font size 7 with our pixel size
       const elements = textContentEl.querySelectorAll('font[size="7"]');
       elements.forEach(fontEl => {
         fontEl.removeAttribute('size');
-        fontEl.style.fontSize = `${e.target.value}px`;
+        fontEl.style.fontSize = `${newSize}px`;
       });
 
       const id = textContentEl.dataset.id;
@@ -729,17 +732,28 @@ fontSizeInput.addEventListener('input', (e) => {
       if (stateEl) {
         stateEl.content = textContentEl.innerHTML;
       }
-      return; // Skip global update
+      return;
     }
   }
 
   if (state.selectedElementIds.length > 0) {
     state.slides[state.currentSlide].forEach(el => {
-      if (state.selectedElementIds.includes(el.id)) el.fontSize = e.target.value;
+      if (state.selectedElementIds.includes(el.id)) el.fontSize = newSize;
     });
     updateUI();
   }
-});
+}
+
+// スライダーを動かした時
+fontSizeInput.addEventListener('input', (e) => changeFontSize(e.target.value));
+fontSizeInput.addEventListener('change', () => saveState());
+
+// 数値を直接打ち込んだ時
+if (fontSizeNum) {
+  fontSizeNum.addEventListener('input', (e) => changeFontSize(e.target.value));
+  fontSizeNum.addEventListener('change', () => saveState());
+}
+// ==========================================
 
 fontSizeInput.addEventListener('change', (e) => {
   saveState();
